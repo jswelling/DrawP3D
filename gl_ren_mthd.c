@@ -1487,7 +1487,6 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
       default:
 	ger_error("Error: ren_mesh: unsupported vertex type %d!\n", it->cvlist->type);
       }
-      fprintf(stderr,"Mesh type %d\n",it->obj_info.mesh_obj.type);
       switch (it->obj_info.mesh_obj.type) {
       case MESH_MIXED:
 	for (loope=0; loope < nfacets; loope++) {
@@ -1499,7 +1498,7 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
 	glDrawElements(GL_TRIANGLES, 3*nfacets, GL_UNSIGNED_INT, indices);
 	break;
       case MESH_QUAD:
-	glDrawElements(GL_TRIANGLES, 4*nfacets, GL_UNSIGNED_INT, indices);
+	glDrawElements(GL_QUADS, 4*nfacets, GL_UNSIGNED_INT, indices);
 	break;
       case MESH_STRIP:
 	for (loope=0; loope < nfacets; loope++) {
@@ -1644,7 +1643,7 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_torus))(the_thing, transform, attrs);
+    (*(ASSIST(self)->ren_torus))(it, transform, attrs);
 #else
 
     if (!it) {
@@ -2102,7 +2101,6 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
     result= (*(ASSIST(self)->def_torus))(major,minor);
-      
     METHOD_OUT
     return( (P_Void_ptr)result );
 #else
@@ -3163,6 +3161,25 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
       it->obj_info.mesh_obj.type= MESH_TRI;
 	
     }
+    it->cvlist= cache_vlist(self, vertices);
+  }
+  else {
+    /* Cache any mesh which is not triangles */
+    if (!(it->obj_info.mesh_obj.indices= 
+	  (int*)malloc(total_indices*sizeof(int))))
+      ger_fatal("def_mesh: unable to allocate %d bytes!",
+		total_indices*sizeof(int));
+    for (i=0; i<total_indices; i++) 
+      it->obj_info.mesh_obj.indices[i]= indices[i];
+    if (!(it->obj_info.mesh_obj.facet_lengths= 
+	  (int*)malloc(nfacets*sizeof(int))))
+      ger_fatal("def_mesh: unable to allocate %d bytes!",
+		nfacets*sizeof(int));
+    for (i=0; i<nfacets; i++)
+      it->obj_info.mesh_obj.facet_lengths[i]= facet_lengths[i];
+    it->obj_info.mesh_obj.nfacets= nfacets;
+    it->obj_info.mesh_obj.type= mesh_type;
+    
     it->cvlist= cache_vlist(self, vertices);
   }
 #else
