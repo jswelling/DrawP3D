@@ -80,8 +80,10 @@ This module provides renderer methods for the IRIS gl renderer
 #ifdef CHROMIUM
 
 #include "chromium.h"
-#define LOAD( x ) gl##x##CR = (cr##x##Proc) glXGetProcAddressARB( "cr"#x )
-#define LOAD2( x ) gl##x##CR = (gl##x##CRProc) glXGetProcAddressARB( "gl"#x )
+#define LOAD( x ) \
+  gl##x##CR = (cr##x##Proc) glXGetProcAddressARB( "cr"#x )
+#define LOAD2( x ) \
+  gl##x##CR = (gl##x##CRProc) glXGetProcAddressARB( "gl"#x"CR" )
 
 /* If we have the good fortune to be running under Chromium, we'll
  * want these...
@@ -89,6 +91,7 @@ This module provides renderer methods for the IRIS gl renderer
 
 static crCreateContextProc  glCreateContextCR  = NULL;
 static crMakeCurrentProc    glMakeCurrentCR    = NULL;
+static crGetCurrentContextProc glGetCurrentContextCR = NULL;
 static crSwapBuffersProc    glSwapBuffersCR    = NULL;
 static crDestroyContextProc glDestroyContextCR = NULL;
 static glBarrierCreateCRProc  glBarrierCreateCR  = NULL;
@@ -97,49 +100,54 @@ static glBarrierDestroyCRProc glBarrierDestroyCR = NULL;
 
 #else
 typedef GLuint (*crCreateContextProc)( GLint window, GLint ctx );
+typedef GLuint (*crGetCurrentContextProc)( void );
 typedef void (*crMakeCurrentProc)( GLint window, GLint ctx );
 typedef void (*crSwapBuffersProc)( GLint window, GLint ctx );
 typedef void (*crDestroyContextProc)( GLint ctx );
-#define LOAD( x ) gl##x##CR = (cr##x##Proc)glXGetProcAddressARB( "cr"#x )
-#define LOAD2( x ) gl##x##CR = glXGetProcAddressARB( "gl"#x )
-#ifdef never
-static GLuint (*glCreateContextCR)( GLint, GLint )        = NULL;
-static void (*glMakeCurrentCR)( GLint window, GLint ctx ) = NULL;
-static void (*glSwapBuffersCR)( GLint i, GLint j )        = NULL;
-static void (*glDestroyContextCR)( GLint ctx )            = NULL;
-#endif
+typedef void (*glBarrierCreateCRProc)( GLuint i, GLuint j);
+typedef void (*glBarrierExecCRProc)( GLuint i );
+typedef void (*glBarrierDestroyCRProc)( GLuint i );
+#define LOAD( x ) \
+  gl##x##CR = (cr##x##Proc) glXGetProcAddressARB( "cr"#x )
+#define LOAD2( x ) \
+  gl##x##CR = (gl##x##CRProc) glXGetProcAddressARB( "gl"#x"CR" )
 static crCreateContextProc  glCreateContextCR             = NULL;
 static crMakeCurrentProc    glMakeCurrentCR               = NULL;
+static crGetCurrentContextProc glGetCurrentContextCR = NULL;
 static crSwapBuffersProc    glSwapBuffersCR               = NULL;
 static crDestroyContextProc glDestroyContextCR            = NULL;
-static void (*glBarrierCreateCR)( GLuint i, GLuint j)     = NULL;
-static void (*glBarrierExecCR)( GLuint i )                = NULL;
-static void (*glBarrierDestroyCR)( GLuint i )             = NULL;
+static glBarrierCreateCRProc glBarrierCreateCR            = NULL;
+static glBarrierExecCRProc glBarrierExecCR                = NULL;
+static glBarrierDestroyCRProc glBarrierDestroyCR          = NULL;
 #define CR_RGB_BIT            0x1
 #define CR_DEPTH_BIT          0x4
 #define CR_DOUBLE_BIT         0x20
+#define CR_SUPPRESS_SWAP_BIT  0x1
 
 #endif
 
 /* And if we have been deprived of Chromium, we may want these... */
 
 static void dummyMakeCurrent( GLint window, GLint ctx )
-{ ger_debug("crMakeCurrentCR is not loaded!\n"); }
+{ ger_error("crMakeCurrentCR is not loaded!\n"); }
+
+static GLuint dummyGetCurrentContext( )
+{ ger_error("crMakeCurrentCR is not loaded!\n"); return -1; }
 
 static void dummySwapBuffers( GLint i, GLint j )
-{ ger_debug("crSwapBuffersCR is not loaded!\n"); }
+{ ger_error("crSwapBuffersCR is not loaded!\n"); }
 
 static void dummyDestroyContext( GLint ctx )
-{ ger_debug("crDestroyContextCR is not loaded!\n"); }
+{ ger_error("crDestroyContextCR is not loaded!\n"); }
 
 static void dummyBarrierCreate( GLuint i, GLuint j )
-{ ger_debug("glBarrierCreateCR is not loaded!\n"); }
+{ ger_error("glBarrierCreateCR is not loaded!\n"); }
 
 static void dummyBarrierExec( GLuint i )
-{ ger_debug("glBarrierExecCR is not loaded!\n"); }
+{ ger_error("glBarrierExecCR is not loaded!\n"); }
 
 static void dummyBarrierDestroy( GLuint i )
-{ ger_debug("glBarrierDestroyCR is not loaded!\n"); }
+{ ger_error("glBarrierDestroyCR is not loaded!\n"); }
 
 #define GLPROF(x)
 
@@ -213,10 +221,10 @@ static GLubyte greyPattern[128]=
 
 /* Used in defining tori */
 #define rad .7071067811865 /*  square root of 2 all divided by 2  */
-static GLfloat knots[] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
-static GLfloat bx[] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
-static GLfloat by[] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
-static GLfloat  w[] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
+static GLfloat knots[12] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
+static GLfloat bx[9] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
+static GLfloat by[9] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
+static GLfloat  w[9] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
 #undef rad
 
 
@@ -251,10 +259,10 @@ static float initiallm[]={
 
 /* Used in defining tori */
 #define rad .7071067811865 /*  square root of 2 all divided by 2  */
-static double knots[] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
-static double bx[] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
-static double by[] = {0., rad, 1.,rad, 0., -rad, 1., -rad, 0.};
-static double  w[] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
+static double knots[12] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
+static double bx[9] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
+static double by[9] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
+static double  w[9] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
 #undef rad
 
 /*So we don't have to realloc these EVERY TIME (primitive caching)*/
@@ -266,15 +274,10 @@ static short hastransparent;
 
 static int ren_seq_num= 0; /* counts gl renderers */
 
-
-/* Further definitions for torus nurbs */
-#define CIRCLE_NUMKNOTS (sizeof(knots)/sizeof(knots[0]))
-#define CIRCLE_NUMPTS (sizeof(bx)/sizeof(bx[0]))
-
 /*Definitions for cylinder nurbs*/
 
 #define CYL_NUMKNOTSX	4
-#define CYL_NUMKNOTSY	20
+#define CYL_NUMKNOTSY	12
 #define CYL_NUMCOORDS	3
 #define CYL_ORDERX      2
 #define CYL_ORDERY      6
@@ -351,7 +354,7 @@ static void set_drawing_window( P_Renderer* self )
   wireGLMakeCurrent();
 #else
   if (chromium_in_use()) {
-    glMakeCurrentCR(0, CRCONTEXT(self));
+    glMakeCurrentCR(XWINDOW(self), CRCONTEXT(self));
   }
   else {
     if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) 
@@ -389,7 +392,7 @@ static void attach_drawing_window( P_Renderer* self )
 #else
   if (chromium_in_use()) {
     /* We're in a Chromium universe */
-    XWINDOW(self)= 0;
+    XWINDOW(self)= glXGetCurrentDrawable();
     
     CRCONTEXT(self) = 
       glCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
@@ -397,11 +400,7 @@ static void attach_drawing_window( P_Renderer* self )
       ger_error("glCreateContextCR() call failed!\n");
       return;
     }
-    glMakeCurrentCR(0, CRCONTEXT(self));
-    
-    if (NPROCS(self)>1) {
-      glBarrierCreateCR(BARRIER(self), NPROCS(self));
-    }
+    glMakeCurrentCR(XWINDOW(self), CRCONTEXT(self));
     
     GLXCONTEXT(self)= NULL;
   }
@@ -488,7 +487,6 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
 #else
   if (chromium_in_use()) {
     /* We're in a Chromium universe */
-    XWINDOW(self)= 0;
     
     CRCONTEXT(self) = 
       glCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
@@ -496,11 +494,8 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
       ger_error("glCreateContextCR() call failed!\n");
       return;
     }
-    glMakeCurrentCR( 0, CRCONTEXT(self) );
-    
-    if (NPROCS(self)>1) {
-      glBarrierCreateCR(BARRIER(self), NPROCS(self));
-    }
+    XWINDOW(self)= glXGetCurrentDrawable();
+    glMakeCurrentCR( XWINDOW(self), CRCONTEXT(self) );
     
     GLXCONTEXT(self)= NULL;
   }
@@ -596,10 +591,13 @@ static void release_drawing_window( P_Renderer* self )
   if (chromium_in_use()) {
     glDestroyContextCR(CRCONTEXT(self));
     CRCONTEXT(self)= -1;
+    XWINDOW(self)= 0;
   }
   else {
     glXDestroyContext(XDISPLAY(self),GLXCONTEXT(self));
+    GLXCONTEXT(self)= 0;
     XDestroyWindow(XDISPLAY(self),XWINDOW(self));
+    XWINDOW(self)= 0;
   }
 #else
   if (AUTO(self)) {
@@ -648,7 +646,7 @@ static void define_materials(P_Renderer *self)
   /* in OpenGL, must define materials separately in each context */
   for (lupe=0; lupe < N_MATERIALS; lupe++) {
     GLfloat params[4];
-    if (MANAGE(self)) set_drawing_window(self);
+    set_drawing_window(self);
     glNewList( materials[lupe].obj=glGenLists(1) , GL_COMPILE);
     params[0]= params[1]= params[2]= materials[lupe].ambient;
     params[3]= 1.0;
@@ -697,7 +695,7 @@ static void update_materials(P_Renderer *self, int mat_index)
     CURMATERIAL(self) = 0;
   }
 #ifdef USE_OPENGL
-  if (MANAGE(self)) set_drawing_window(self);
+  set_drawing_window(self);
   glCallList(materials[CURMATERIAL(self)].obj);
 #else
   lmbind(MATERIAL, materials[CURMATERIAL(self)].index);
@@ -1226,7 +1224,7 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 	
     /*and render*/
 #ifdef USE_OPENGL
-    if (MANAGE(self)) set_drawing_window(self);
+    set_drawing_window(self);
     if (it->obj_info.obj) glCallList(it->obj_info.obj);
 #else
     if (it->obj_info.obj) callobj(it->obj_info.obj);
@@ -1503,7 +1501,7 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
 	glDrawElements(GL_TRIANGLES, 3*nfacets, GL_UNSIGNED_INT, indices);
 	break;
       case MESH_QUAD:
-	glDrawElements(GL_QUADS, 4*nfacets, GL_UNSIGNED_INT, indices);
+	glDrawElements(GL_TRIANGLES, 4*nfacets, GL_UNSIGNED_INT, indices);
 	break;
       case MESH_STRIP:
 	for (loope=0; loope < nfacets; loope++) {
@@ -1648,7 +1646,7 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_torus))(it, transform, attrs);
+    (*(ASSIST(self)->ren_torus))(the_thing, transform, attrs);
 #else
 
     if (!it) {
@@ -1662,9 +1660,8 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 #ifdef USE_OPENGL
     if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
       gluBeginSurface( it->obj_info.nurbs_obj.ren );
-      gluNurbsSurface( it->obj_info.nurbs_obj.ren, CIRCLE_NUMKNOTS, knots, 
-		       CIRCLE_NUMKNOTS, knots,  
-		       4,  4 * CIRCLE_NUMPTS,  
+      gluNurbsSurface( it->obj_info.nurbs_obj.ren, 12, knots, 12, knots,  
+		       4,  4 * 9,  
 		       it->obj_info.nurbs_obj.data,  3,  3,  GL_MAP2_VERTEX_4);
       gluEndSurface( it->obj_info.nurbs_obj.ren );
     }
@@ -1673,8 +1670,8 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 
     if (it->obj_info.nurbs_obj) {
       bgnsurface();
-      nurbssurface(CIRCLE_NUMKNOTS,knots,CIRCLE_NUMKNOTS,knots,
-		   4*sizeof(double), 4*sizeof(double) * CIRCLE_NUMPTS,
+      nurbssurface(12,knots,12,knots,
+		   4*sizeof(double), 4*sizeof(double) * 9,
 		   it->obj_info.nurbs_obj, 3, 3, N_V3DR);
       endsurface();      
     }
@@ -2107,6 +2104,7 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
     result= (*(ASSIST(self)->def_torus))(major,minor);
+      
     METHOD_OUT
     return( (P_Void_ptr)result );
 #else
@@ -2124,20 +2122,16 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
 	ger_fatal("def_torus: unable to allocate %d bytes!", 
 		  sizeof(gl_gob));
 #ifdef USE_OPENGL
-      if ( !(knot_data= 
-	     (GLfloat*)malloc(CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(GLfloat))) )
-	ger_fatal("def_torus: unable to allocate %d bytes!",
-		  CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(GLfloat));
+      if ( !(knot_data= (GLfloat*)malloc(9*9*4*sizeof(GLfloat))) )
 #else
-	if ( !(knot_data= 
-	       (double*)malloc(CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(double))) )
-	  ger_fatal("def_torus: unable to allocate %d bytes!",
-		    CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(double));
+	if ( !(knot_data= (double*)malloc(9*9*4*sizeof(double))) )
 #endif
+	  ger_fatal("def_torus: unable to allocate %d bytes!",
+		    9*9*4*sizeof(double));
 	
       runner= knot_data;
-      for(j=0;j<CIRCLE_NUMPTS;j++)  {
-	for(i=0;i<CIRCLE_NUMPTS;i++)  {
+      for(j=0;j<9;j++)  {
+	for(i=0;i<9;i++)  {
 	  *runner++= (minor * bx[j] + major * w[j]) * bx[i];
 	  *runner++= (minor * bx[j] + major * w[j]) * by[i];
 	  *runner++= minor * w[i] * by[j];
@@ -2175,6 +2169,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
   if (RENDATA(self)->open) {
     
     if (!(RENDATA(self)->initialized)) {
+      set_drawing_window(self);
       init_gl_gl(self);
       RENDATA(self)->initialized= 1;
     }
@@ -2234,12 +2229,12 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 #endif
 #endif
 
-	if (MANAGE(self)) set_drawing_window(self);
+	set_drawing_window(self);
 	get_drawing_area(self,&x_corner,&y_corner,&xsize,&ysize);
 	ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
 
 #ifdef USE_OPENGL
-	if (NPROCS(self)<2 || RANK(self)==0) {
+	if (RANK(self)==0) {
 	  GLPROF("Clearing");
 	  glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
 		       BACKGROUND(self)[2], BACKGROUND(self)[3]);
@@ -2248,8 +2243,9 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 #if defined(WIREGL)
 	if (NPROCS(self)>1) glBarrierExec(BARRIER(self));
 #else
-	if (NPROCS(self)>1 && chromium_in_use()) 
+	if (chromium_in_use()) {
 	  glBarrierExecCR( BARRIER(self) );
+	}
 #endif
 	GLPROF("BuildingCoordTrans")
 	  glPushMatrix();
@@ -2323,10 +2319,24 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 #endif
 
 #else
-	if (NPROCS(self)>1) {
-	  /* If NPROCS > 1, we can assume Chromium */
+	if (chromium_in_use()) {
 	  glBarrierExecCR( BARRIER(self) );
 	}
+
+	if (chromium_in_use()) {
+	  /* The crserver only executes the SwapBuffers() for the 0th client.
+	   * No need to test for rank==0 as we used to do.
+	   */
+	  if (RANK(self)==0) glSwapBuffersCR(0, 0);
+	  else glSwapBuffersCR(0, CR_SUPPRESS_SWAP_BIT);
+	}
+	else {
+	  if (MANAGE(self)) {
+	    glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
+	  }
+	}
+
+#ifdef never
 	if (MANAGE(self)) {
 	  if (chromium_in_use()) {
 	    /* The crserver only executes the SwapBuffers() for the 0th client.
@@ -2338,6 +2348,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 	    glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
 	  }
 	}
+#endif
 #endif
 	glFlush();
 #else
@@ -2382,7 +2393,7 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
       if (thistrans) {
 	/* Top level call; initialize lighting state and traversal */
 
-	if (MANAGE(self)) set_drawing_window(self);
+	set_drawing_window(self);
 
 	DLIGHTBUFFER(self) = thisgob;
       
@@ -2809,7 +2820,7 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     
 #ifdef USE_GL_OBJ
 #ifdef USE_OPENGL
-  if (MANAGE(self)) set_drawing_window(self);
+  set_drawing_window(self);
   glNewList( it->obj_info.obj=glGenLists(1) , GL_COMPILE);
 #else
   makeobj( it->obj_info.obj=genobj() );
@@ -3175,13 +3186,13 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
   }
   else {
     /* Cache any mesh which is not triangles */
-    if (!(it->obj_info.mesh_obj.indices= 
+    if (!(it->obj_info.mesh_obj.indices=
 	  (int*)malloc(total_indices*sizeof(int))))
       ger_fatal("def_mesh: unable to allocate %d bytes!",
 		total_indices*sizeof(int));
-    for (i=0; i<total_indices; i++) 
+    for (i=0; i<total_indices; i++)
       it->obj_info.mesh_obj.indices[i]= indices[i];
-    if (!(it->obj_info.mesh_obj.facet_lengths= 
+    if (!(it->obj_info.mesh_obj.facet_lengths=
 	  (int*)malloc(nfacets*sizeof(int))))
       ger_fatal("def_mesh: unable to allocate %d bytes!",
 		nfacets*sizeof(int));
@@ -3192,6 +3203,7 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     
     it->cvlist= cache_vlist(self, vertices);
   }
+  
 #else
 
   /* Cache everything */
@@ -3544,7 +3556,7 @@ static void set_camera(P_Void_ptr thecamera) {
   /*Well, it was stashed, and now we get to use it.
     Happy Happy Joy Joy.*/
     
-  if (MANAGE(self)) set_drawing_window(self);
+  set_drawing_window(self);
   if (!(RENDATA(self)->initialized)) {
     init_gl_gl(self);
     RENDATA(self)->initialized= 1;
@@ -3735,7 +3747,7 @@ static void ren_destroy() {
     glDestroyContextCR(CRCONTEXT(self));
     CRCONTEXT(self)= -1;
   }
-  if (NPROCS(self)>1) glBarrierDestroyCR( BARRIER(self) );
+  if (chromium_in_use()) glBarrierDestroyCR( BARRIER(self) );
 #endif
 #else
   free( (P_Void_ptr)LM(self) );
@@ -3892,7 +3904,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
     char* where;
     char* dupDatastr= strdup(datastr);
     int firstPass= 1;
-    while ( thisTok= strtok_r( (firstPass ? dupDatastr : NULL), ",", &where ) ) {
+    while ( thisTok= strtok_r( (firstPass ? dupDatastr : NULL),",",&where ) ) {
       if (!strncasecmp(thisTok,"name=",strlen("name="))
 	  || !strncasecmp(thisTok,"title=",strlen("title="))) {
 	if (name) free(name);
@@ -3947,6 +3959,19 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
     set_drawing_window(self);
   }
 
+  if (chromium_in_use()) {
+    /* If current context has not been initialized, MANAGE(self) is 0 
+     * and the calling application has generated a context.  We need
+     * to grab that context.
+     */
+    if (!CRCONTEXT(self)) {
+      GLXCONTEXT(self)= glXGetCurrentContext();
+      CRCONTEXT(self)= glGetCurrentContextCR();
+      XWINDOW(self)= glXGetCurrentDrawable();
+    }
+    glBarrierCreateCR(BARRIER(self), NPROCS(self));
+  }
+
   if (size) free(size);
 
   return (self);
@@ -3966,6 +3991,8 @@ static void init_gl_structure (P_Renderer *self)
   if (!glDestroyContextCR) glDestroyContextCR= dummyDestroyContext;;
   if (!glMakeCurrentCR) LOAD( MakeCurrent );
   if (!glMakeCurrentCR) glMakeCurrentCR= dummyMakeCurrent;
+  if (!glGetCurrentContextCR) LOAD( GetCurrentContext );
+  if (!glGetCurrentContextCR) glGetCurrentContextCR= dummyGetCurrentContext;
   if (!glSwapBuffersCR) LOAD( SwapBuffers );
   if (!glSwapBuffersCR) glSwapBuffersCR= dummySwapBuffers;
 
@@ -3975,7 +4002,7 @@ static void init_gl_structure (P_Renderer *self)
   CYLINDER_DEFINED(self)= 0;
   for (lupe=0; lupe<MY_GL_MAX_LIGHTS; lupe++)
     LIGHT_IN_USE(self)[lupe]= 0;
-  if (NPROCS(self)>1) {
+  if (chromium_in_use()) {
     BARRIER(self)= BARRIER_BASE+ren_seq_num;
   }
   else {
@@ -4094,14 +4121,14 @@ static void init_gl_gl (P_Renderer *self)
   else if (MANAGE(self) && (NPROCS(self)>1 || RANK(self)!=0))
     wireGLInstrumentNextFrame();
 #endif
-#endif
+#else
   if (chromium_in_use()) {
-    if (NPROCS(self)>1) glBarrierExecCR( BARRIER(self) );
-    if (MANAGE(self)) glSwapBuffersCR(0, 0);
+    glBarrierExecCR( BARRIER(self) );
   }
   else {
-    if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
+    /* Do nothing */
   }
+#endif
   glEnable(GL_DEPTH_TEST);
   glShadeModel(GL_SMOOTH);
   glEnable(GL_LIGHTING);
