@@ -59,10 +59,14 @@ FILE* debugFile= NULL;
 #include "wiregl_papi.h"
 #endif
 
+#define STRIP_MESHES 0
+#define STRIP_PATIENCE 10000
+
+/* Used only with Chromium, but it's easier to define it generally */
+#define BARRIER_BASE 100
+
 #ifdef CHROMIUM
 #include "cr_applications.h"
-
-#define BARRIER_BASE 100
 
 /* If we have the good fortune to be running under Chromium, we'll
  * want these...
@@ -1280,6 +1284,56 @@ static void destroy_object(P_Void_ptr the_thing) {
       }
     }
 
+  static void sendVertex(int type, int index, float* coords,
+			 float* colors, float* normals)
+    {
+      switch(type) {
+      case P3D_CVTX:
+	/*Coordinate vertex list: feed and draw.*/
+#ifdef USE_OPENGL
+	glVertex3fv(coords + 3*index);
+#else
+	v3f(coords + 3*index);
+#endif
+	break;
+      case P3D_CCVTX:
+	/*Coordinate/color vertex list*/
+#ifdef USE_OPENGL
+	glColor4fv(colors+4*index);
+	glVertex3fv(coords+3*index);
+#else
+	c4f(colors+4*index);
+	v3f(coords+3*index);
+#endif
+	break;
+      case P3D_CCNVTX:
+	/*Coordinate/color/normal vertex list*/
+#ifdef USE_OPENGL
+	glNormal3fv(normals+3*index);
+	glColor4fv(colors+4*index);
+	glVertex3fv(coords+3*index);
+#else
+	n3f(normals+3*index);
+	c4f(colors+4*index);
+	v3f(coords+3*index);
+#endif
+	break;
+      case P3D_CNVTX:
+	/*Coordinate/normal vertex list*/
+#ifdef USE_OPENGL
+	glNormal3fv(normals+3*index);
+	glVertex3fv(coords+3*index);
+#else
+	n3f(normals+3*index);
+	v3f(coords+3*index);
+#endif
+	break;
+      default:
+	printf("gl_ren_mthd: sendVertex: null vertex type.\n");
+	break;
+      } /*switch(vertices->type)*/
+    }
+
   static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
 		       P_Attrib_List *attrs) {
     
@@ -1293,9 +1347,6 @@ static void destroy_object(P_Void_ptr the_thing) {
 
     P_Renderer *self = (P_Renderer *)po_this;
     P_Color *pcolor;
-    float col4[4];
-    float vtx[3];
-    float nor[3];
     P_Material *mat;
     int screendoor_set= 0;
     int *facet_lengths;
@@ -1304,14 +1355,16 @@ static void destroy_object(P_Void_ptr the_thing) {
     float* coords;
     float* colors;
     float* normals;
+#ifdef never
     int icrd;
     int iclr;
     int inrm;
+#endif
     int lupe;
     int loope;
     METHOD_IN
 	
-      gl_gob *it = (gl_gob *)the_thing;
+    gl_gob *it = (gl_gob *)the_thing;
     
     if (RENDATA(self)->open) {
       ger_debug("gl_ren_mthd: ren_mesh");
@@ -1338,116 +1391,51 @@ static void destroy_object(P_Void_ptr the_thing) {
 	colors= it->cvlist->colors;
 	normals= it->cvlist->normals;
 
-	for (loope=0; loope < nfacets; loope++) {
+	fprintf(stderr,"%d facets\n",nfacets);
+	if (it->obj_info.mesh_obj.type == MESH_TRI) {
 #ifdef USE_OPENGL
-	  if (*facet_lengths == 3)
-	    glBegin(GL_TRIANGLES);
-	  else if (*facet_lengths == 4)
-	    glBegin(GL_QUADS);
-	  else
-	    glBegin(GL_POLYGON);
+	  glBegin(GL_TRIANGLES);
 #else
-	  if (*facet_lengths == 3)
-	    bgntmesh();
-	  else
-	    bgnpolygon();
+	  bgntmesh();
 #endif
-	  switch(it->cvlist->type) {
-	  case P3D_CVTX:
-	    /*Coordinate vertex list: feed and draw.*/
-	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++) {
-	      icrd= 3* *indices;
-	      vtx[0] = coords[icrd];
-	      vtx[1] = coords[icrd+1];
-	      vtx[2] = coords[icrd+2];
-#ifdef USE_OPENGL
-	      glVertex3fv(vtx);
-#else
-	      v3f(vtx);
-#endif
-	    }
-	    break;
-	  case P3D_CCVTX:
-	    /*Coordinate/color vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-	      icrd= 3* *indices;
-	      iclr= 4* *indices;
-	      col4[0] = colors[iclr];
-	      col4[1] = colors[iclr+1];
-	      col4[2] = colors[iclr+2];
-	      col4[3] = colors[iclr+3];
-	      vtx[0] = coords[icrd];
-	      vtx[1] = coords[icrd+1];
-	      vtx[2] = coords[icrd+2];
-#ifdef USE_OPENGL
-	      glColor4fv(col4);
-	      glVertex3fv(vtx);
-#else
-	      c4f(col4);
-	      v3f(vtx);
-#endif
-	    }
-	    break;
-	  case P3D_CCNVTX:
-	    /*Coordinate/color/normal vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-	      icrd= 3* *indices;
-	      iclr= 4* *indices;
-	      inrm= 3* *indices;
-	      nor[0] = normals[inrm];
-	      nor[1] = normals[inrm+1];
-	      nor[2] = normals[inrm+2];
-	      col4[0] = colors[iclr];
-	      col4[1] = colors[iclr+1];
-	      col4[2] = colors[iclr+2];
-	      col4[3] = colors[iclr+3];
-	      vtx[0] = coords[icrd];
-	      vtx[1] = coords[icrd+1];
-	      vtx[2] = coords[icrd+2];
-#ifdef USE_OPENGL
-	      glNormal3fv(nor);
-	      glColor4fv(col4);
-	      glVertex3fv(vtx);
-#else
-	      n3f(nor);
-	      c4f(col4);
-	      v3f(vtx);
-#endif
-	    }
-	    break;
-	  case P3D_CNVTX:
-	    /*Coordinate/normal vertex list*/
-	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++) {
-	      icrd= 3* *indices;
-	      inrm= 3* *indices;
-	      nor[0] = normals[inrm];
-	      nor[1] = normals[inrm+1];
-	      nor[2] = normals[inrm+2];
-	      vtx[0] = coords[icrd];
-	      vtx[1] = coords[icrd+1];
-	      vtx[2] = coords[icrd+2];
-#ifdef USE_OPENGL
-	      glNormal3fv(nor);
-	      glVertex3fv(vtx);
-#else
-	      n3f(nor);
-	      v3f(vtx);
-#endif
-	    }
-	    break;
-	  default:
-	    printf("gl_ren_mthd: ren_mesh: null vertex type.\n");
-	    break;
-	  } /*switch(vertices->type)*/
+	  for (loope=0; loope < nfacets; loope++) 
+	    for (lupe=0;lupe < facet_lengths[loope]; lupe++, indices++)
+	      sendVertex(it->cvlist->type, *indices, coords, colors, normals);
 	  
 #ifdef USE_OPENGL
 	  glEnd();
 #else
-	  if (*facet_lengths == 3)
-	    endtmesh();
-	  else
-	    endpolygon();
+	  endtmesh();
 #endif
+	}
+	else {
+	  for (loope=0; loope < nfacets; loope++) {
+
+#ifdef USE_OPENGL
+	    if (*facet_lengths == 3)
+	      glBegin(GL_TRIANGLES);
+	    else if (*facet_lengths == 4)
+	      glBegin(GL_QUADS);
+	    else
+	      glBegin(GL_POLYGON);
+#else
+	    if (*facet_lengths == 3)
+	      bgntmesh();
+	    else
+	      bgnpolygon();
+#endif
+	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++)
+	      sendVertex(it->cvlist->type, *indices, coords, colors, normals);
+	    
+#ifdef USE_OPENGL
+	    glEnd();
+#else
+	    if (*facet_lengths == 3)
+	      endtmesh();
+	    else
+	      endpolygon();
+#endif
+	  }
 	  facet_lengths++;
 	}
       }
@@ -2672,6 +2660,7 @@ static void destroy_object(P_Void_ptr the_thing) {
     gl_gob *it;
     int lupe, loope;
     int total_indices; 
+    gl_mesh_type mesh_type;
     int i;
     int j;
     float vtx[3];
@@ -2927,9 +2916,142 @@ static void destroy_object(P_Void_ptr the_thing) {
     it->obj_info.obj= NULL;
 #endif
 
-    /* Count total indices */
-    total_indices= 0;
-    for (i=0; i<nfacets; i++) total_indices += facet_lengths[i];
+    /* Count total indices, and classify this mesh */
+    if (facet_lengths[0] == 3) mesh_type= MESH_TRI;
+    else if (facet_lengths[0] == 4) mesh_type= MESH_QUAD;
+    else mesh_type= MESH_MIXED;
+    total_indices= facet_lengths[0];
+    for (i=1; i<nfacets; i++) {
+      total_indices += facet_lengths[i];
+      if (facet_lengths[i] != facet_lengths[0]) mesh_type= MESH_MIXED;
+    }
+    fprintf(stderr,"Here; mesh is type %d\n",mesh_type);
+#if (STRIP_MESHES != 0)
+    if (mesh_type==MESH_TRI) {
+      int hits;
+      int* newIndex= NULL;
+      int* mark= NULL;
+      int* here;
+      int odd;
+      int length;
+      int firstFree= 0;
+      int nFree= nfacets;
+      int minLength= 1000;
+      int maxLength= 0;
+      int totLength= 0;
+      int count= 0;
+      int minPatience= STRIP_PATIENCE; /* a convenient large number */;
+      int maxPatience= 0;
+      double totPatience= 0.0;
+      int countPatience= 0;
+      int prevMatchIndex= 0;
+
+      if (!(newIndex= (int*)malloc(nfacets*sizeof(int)))) 
+	ger_fatal("def_mesh: unable to allocate %d bytes!\n",
+		  nfacets*sizeof(int));
+      if (!(mark= (int*)malloc(nfacets*sizeof(int)))) 
+	ger_fatal("def_mesh: unable to allocate %d bytes!\n",
+		  nfacets*sizeof(int));
+      for (i=0; i<nfacets; i++) mark[i]= 0;
+      fprintf(stderr,"Don't forget to clean up memory!\n");
+
+      here= newIndex;
+
+      *here++= indices[3*firstFree];
+      *here++= indices[3*firstFree+1];
+      *here++= indices[3*firstFree+2];
+      nFree--;
+      mark[firstFree]= 1;
+      firstFree += 1;
+      odd= 1;
+      length= 1;
+      prevMatchIndex= 0;
+
+      while (nFree) {
+	/* Start a new strip on firstFree */
+
+	/* Run from here to the end, looking for a good next cell */
+
+	int limit= firstFree+STRIP_PATIENCE;
+	if (limit>nfacets) limit= nfacets;
+	for (i=firstFree; i<limit; i++) {
+	  if (!mark[i]) {
+	    if (odd) {
+	      if (indices[3*i]==*(here-2)&&indices[3*i+2]==*(here-1)) {
+		*here++= indices[3*i+1];
+		break;
+	      }
+	      else if (indices[3*i+1]==*(here-2)&&indices[3*i]==*(here-1)) {
+		*here++= indices[3*i+2];
+		break;
+	      }
+	      else if (indices[3*i+2]==*(here-2)&&indices[3*i+1]==*(here-1)) {
+		*here++= indices[3*i];
+		break;
+	      }
+	    }
+	    else { /* even case */
+	      if (indices[3*i+2]==*(here-2)&&indices[3*i]==*(here-1)) {
+		*here++= indices[3*i+1];
+		break;
+	      }
+	      else if (indices[3*i]==*(here-2)&&indices[3*i+1]==*(here-1)) {
+		*here++= indices[3*i+2];
+		break;
+	      }
+	      else if (indices[3*i+1]==*(here-2)&&indices[3*i+2]==*(here-1)) {
+		*here++= indices[3*i];
+		break;
+	      }
+	    }
+	  }
+	}
+	if (i!=limit) {
+	  /* matched */
+	  mark[i]= 1;
+	  hits++;
+	  nFree--;
+	  odd= !odd;
+	  length++;
+	  if (i-prevMatchIndex > maxPatience) maxPatience= i-prevMatchIndex;
+	  if (i-prevMatchIndex < minPatience) minPatience= i-prevMatchIndex;
+	  totPatience += 
+	    ((double)(i-prevMatchIndex))*((double)(i-prevMatchIndex));
+	  countPatience++;
+	  prevMatchIndex= i;
+	}
+	else {
+	  /* start a new strip */
+	  if (length<minLength) minLength= length;
+	  if (length>maxLength) maxLength= length;
+	  totLength += length;
+	  count += 1;
+	  while (firstFree<nfacets && mark[firstFree]) firstFree++;
+	  if (firstFree==nfacets) break;
+	  *here++= indices[3*firstFree];
+	  *here++= indices[3*firstFree+1];
+	  *here++= indices[3*firstFree+2];
+	  nFree--;
+	  mark[firstFree]= 1;
+	  while (firstFree<nfacets && mark[firstFree]) firstFree++;
+	  odd= 1;
+	  length= 1;
+	  if (firstFree==nfacets) break;
+	}
+
+	if (!(count % 10000)) {
+	  fprintf(stderr,"firstFree= %d: min %d max %d mean %f on %d\n",
+		  firstFree,minLength,maxLength,
+		  (double)totLength/(double)count, count);
+	  fprintf(stderr,"     Patience: min %d max %d mean %f on %d\n",
+		  minPatience,maxPatience,
+		  sqrt(totPatience/(double)countPatience), 
+		  countPatience);
+	}
+      }
+      fprintf(stderr,"Got %d hits on %d facets\n",hits,nfacets);
+    }
+#endif
 
     /* Cache everything */
     if (!(it->obj_info.mesh_obj.indices= 
@@ -2942,14 +3064,13 @@ static void destroy_object(P_Void_ptr the_thing) {
 	  (int*)malloc(nfacets*sizeof(int))))
       ger_fatal("def_mesh: unable to allocate %d bytes!",
 		nfacets*sizeof(int));
-    for (i=0; i<nfacets; i++) 
+    mesh_type= MESH_TRI;
+    for (i=0; i<nfacets; i++)
       it->obj_info.mesh_obj.facet_lengths[i]= facet_lengths[i];
     it->obj_info.mesh_obj.nfacets= nfacets;
+    it->obj_info.mesh_obj.type= mesh_type;
 
     it->cvlist= cache_vlist(self, vertices);
-
-    
-
 
 #endif /* USE_GL_OBJ */
     
@@ -3055,8 +3176,6 @@ static void destroy_object(P_Void_ptr the_thing) {
       glLightfv( GL_LIGHT0 + light->light_num, GL_SPECULAR, light->cvals );
       glLightfv( GL_LIGHT0 + light->light_num, GL_POSITION, light->xvals );
       glEnable( GL_LIGHT0 + light->light_num );
-      fprintf(stderr,"Traverse light %d on %s\n",light->light_num,
-	      self->name);
     }
 
 #else
