@@ -155,12 +155,12 @@ static void destroy_object(P_Void_ptr the_thing) {
 }
 
 static void ren_transform(P_Transform trans) {
-    register short lupe, loope;
+    register short lupe, loope, lup;
     Matrix theMatrix;
     
-    for (lupe=0;lupe<16;lupe+=4)
+    for (lupe=lup=0;lupe<16;lupe+=4, lup++)
 	for (loope=0;loope<4;loope++)
-	    theMatrix[loope][lupe]=trans.d[lupe+loope];
+	    theMatrix[loope][lup]=trans.d[lupe+loope];
     multmatrix(theMatrix);
 }
 
@@ -1672,16 +1672,16 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   for (lupe=0; lupe < N_MATERIALS; lupe++)
       lmdef(DEFMATERIAL, lupe+1, 5, materials[lupe]);
 
-  for (lupe = 0; lupe < 9; lupe++)
-      LM(self)[lupe] = initiallm[lupe];
-  
   getsize(&xsize, &ysize);
   ASPECT(self)= (float)xsize / (float)ysize;
   
   BACKGROUND(self) = (float *)(malloc(3*sizeof(float)));
   AMBIENTCOLOR(self) = (float *)(malloc(3*sizeof(float)));
   LM(self) = (float *)(malloc(9*sizeof(float)));
-  
+
+  for (lupe = 0; lupe < 9; lupe++)
+      LM(self)[lupe] = initiallm[lupe];
+    
   ASSIST(self)= po_create_assist(self);
 
   BACKCULLSYMBOL(self)= create_symbol("backcull");
