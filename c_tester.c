@@ -1186,6 +1186,8 @@ main()
   ERRCHK( dp_init_ren("myrenderer","gl","",
 		      "geometry=\"512x512+0+0\"") );
 #ifdef never
+  ERRCHK( dp_init_ren("myrenderer","xpainter","",
+		      "512x512+0+0") );
   ERRCHK( dp_init_ren("myrenderer","iv","c_tester_####.iv",
 		      "I don't care about this string") );
 #endif

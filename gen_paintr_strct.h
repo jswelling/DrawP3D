@@ -62,6 +62,7 @@ typedef struct pnt_polyrecord
   int numcoords;        /* number of coordinates in this record */   
   Pnt_Colortype *color;	/* pointer to color memory buffer  */
   primtype type;        /* is it a POLYGON, POLYLINE,or POLYMARKER */
+  int free_me;          /* non-zero if individually malloc'd */
 } Pnt_Polytype;
 
 typedef struct pnt_dpolyrecord

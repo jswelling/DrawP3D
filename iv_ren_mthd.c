@@ -675,7 +675,6 @@ static void destroy_polything( P_Void_ptr object_data )
   if (RENDATA(self)->open) {
     ger_debug("iv_ren_mthd: destroy_polything");
     free_cached_vlist( (P_Cached_Vlist*)object_data );
-    free( object_data );
   }
 
   METHOD_OUT;

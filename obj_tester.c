@@ -171,14 +171,19 @@ static void my_map_fun( float *val, float *r, float *g, float *b, float *a )
 }
 
 static void object_tests( VOIDLIST )
-/* This routine tests all the objects except hash tables. */
+/* This routine tests all the low_level objects except hash tables. */
 {
-  P_Vlist *cvtx_vlist, *bez_vtx_vlist;
+  P_Vlist *cvtx_vlist1, *cvtx_vlist2, *cvtx_vlist3, *cvtx_vlist4, *cvtx_vlist5;
+  P_Vlist *bez_vtx_vlist;
   P_Gob *gob, *sphere1, *cylinder1, *torus1, *text1, *pmark1, *pline1;
   P_Gob *pgon1, *tri1, *bezier1, *mesh1;
   P_Gob *light1, *ambient1, *lightgob;
   
-  cvtx_vlist= po_create_cvlist( P3D_CVTX, CVTX_LENGTH, cvtx_coords );
+  cvtx_vlist1= po_create_cvlist( P3D_CVTX, CVTX_LENGTH, cvtx_coords );
+  cvtx_vlist2= po_create_cvlist( P3D_CVTX, CVTX_LENGTH, cvtx_coords );
+  cvtx_vlist3= po_create_cvlist( P3D_CVTX, CVTX_LENGTH, cvtx_coords );
+  cvtx_vlist4= po_create_cvlist( P3D_CVTX, CVTX_LENGTH, cvtx_coords );
+  cvtx_vlist5= po_create_cvlist( P3D_CVTX, CVTX_LENGTH, cvtx_coords );
   bez_vtx_vlist= po_create_cvlist( P3D_CVTX, 16, bez_vtx_coords );
 
   gob= po_create_gob("");
@@ -187,12 +192,12 @@ static void object_tests( VOIDLIST )
   cylinder1= po_create_cylinder("cyl1");
   torus1= po_create_torus("tor1",3.0, 0.8);
   text1= po_create_text("txt1",test_string,&text_loc,&text_u,&text_v);
-  pmark1= po_create_polymarker("pmk1",cvtx_vlist);
-  pline1= po_create_polyline("pln1",cvtx_vlist);
-  pgon1= po_create_polygon("pgn1",cvtx_vlist);
-  tri1= po_create_polygon("tri1",cvtx_vlist);
+  pmark1= po_create_polymarker("pmk1",cvtx_vlist1);
+  pline1= po_create_polyline("pln1",cvtx_vlist2);
+  pgon1= po_create_polygon("pgn1",cvtx_vlist3);
+  tri1= po_create_polygon("tri1",cvtx_vlist4);
   bezier1= po_create_bezier("bezier1",bez_vtx_vlist);
-  mesh1= po_create_mesh("msh1",cvtx_vlist,meshind,meshlengths,meshfacets);
+  mesh1= po_create_mesh("msh1",cvtx_vlist5,meshind,meshlengths,meshfacets);
   light1= po_create_light("lt1",&light_loc,&light_color);
   ambient1= po_create_ambient("amb1",&ambient_color);
 

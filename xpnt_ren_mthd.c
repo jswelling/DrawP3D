@@ -392,7 +392,6 @@ static void kill_widget_cb( Widget w, P_Renderer *self, XtPointer call_data )
 static void xpnt_init_renderer(P_Renderer *self, char *device, char *data)
 {
   int i;
-  char *ptr;
   
   /*  
     ViewMatrix is the matrix that translates  coordinates from
@@ -438,11 +437,20 @@ static void xpnt_init_renderer(P_Renderer *self, char *device, char *data)
       || !pnt_Xclip_buffer || !pnt_Yclip_buffer || !pnt_Zclip_buffer )
     ger_fatal("xpainter: pnt_init_renderer: memory allocation failed!\n");
 
-  if (ptr = strchr(data, 'x')) {
-    *(ptr) = '\0';
-    WIDTH(self) = atoi(data);
-    HEIGHT(self) = atoi(ptr+1);
-  } else {
+  if (data) {
+    char *ptr;
+    char* datadup= strdup(data);
+    if (ptr = strchr(datadup, 'x')) {
+      *(ptr) = '\0';
+      WIDTH(self) = atoi(datadup);
+      HEIGHT(self) = atoi(ptr+1);
+    } else {
+      WIDTH(self) = DEFAULT_WIDTH;
+      HEIGHT(self) = DEFAULT_HEIGHT;
+    }
+    free(datadup);
+  }
+  else {
     WIDTH(self) = DEFAULT_WIDTH;
     HEIGHT(self) = DEFAULT_HEIGHT;
   }
@@ -493,7 +501,7 @@ static void xpnt_init_renderer(P_Renderer *self, char *device, char *data)
   }
   else {
     /* 'widget=' only  -  create xdrawimagehandler */
-    ptr = strchr(device, '=');
+    char* ptr = strchr(device, '=');
     WIDGET(self) = (Widget)atol(ptr+1);
     if (XtIsRealized(WIDGET(self))) { /* App already created widget and win */
       Window canvas_win;

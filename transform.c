@@ -170,8 +170,11 @@ P_Transform_type *duplicate_trans_type( P_Transform_type *source )
     
   ger_debug("transform: duplicate_trans_type");
 
-  t = allocate_trans_type();
-  copy_trans_type(t,source);
+  if (source==NULL) t= NULL;
+  else {
+    t = allocate_trans_type();
+    copy_trans_type(t,source);
+  }
   return( t );
 }
 

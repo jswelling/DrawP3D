@@ -26,6 +26,7 @@ typedef struct _XdIH {
   Pixmap current_pixmap;
   XStandardColormap map_info;
   int map_info_set;
+  int map_info_owned;
   GC gc;
   unsigned int win_x_size, win_y_size;
   /* unsigned int image_x_size, image_y_size;

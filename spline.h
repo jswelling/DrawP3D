@@ -34,7 +34,7 @@
 #ifndef spline_h
 #define spline_h
 
-#include <p3dgen.h>
+#include "p3dgen.h"
 
 /* This keeps a standard way of defining all the spline files that you 
 can get. */

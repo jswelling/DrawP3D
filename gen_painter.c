@@ -1322,6 +1322,7 @@ static Pnt_Polytype *get_polyrec( P_Renderer *self, P_Vlist *vlist,
   METHOD_RDY(vlist);
   result->numcoords= vlist->length;
   result->type= polytype;
+  result->free_me= 1;
   get_coords(result,vlist);
   METHOD_RDY(vlist);
   switch (vlist->type) {
@@ -1360,6 +1361,7 @@ static Pnt_Polytype *get_mesh_polyrec( P_Renderer *self, P_Vlist *vlist,
   for (i=0; i<nfacets; i++) {
     runner->numcoords= *facet_lengths;
     runner->type= polytype;
+    runner->free_me= 0;
     get_ind_coords(runner, vlist, indices, *facet_lengths);
     switch (vlist->type) {
     case P3D_CVTX:   
@@ -1384,6 +1386,7 @@ static Pnt_Polytype *get_mesh_polyrec( P_Renderer *self, P_Vlist *vlist,
     facet_lengths++;
     runner++;
   }
+  result->free_me= 1; /* freeing the first will free all */
 
   return(result);
 }
@@ -1417,6 +1420,7 @@ static Pnt_Polytype *get_tri_polyrec( P_Renderer *self, P_Vlist *vlist,
     }
     runner->numcoords= 3;
     runner->type= type;
+    runner->free_me= 0;
     get_ind_coords(runner, vlist, indices, 3);
     switch (vlist->type) {
     case P3D_CVTX:   
@@ -1439,6 +1443,7 @@ static Pnt_Polytype *get_tri_polyrec( P_Renderer *self, P_Vlist *vlist,
     /* Advance to the next polygon */
     runner++;
   }
+  result->free_me= 1; /* freeing the first will free all */
 
   return(result);
 }
@@ -1458,6 +1463,7 @@ static Pnt_Polytype *get_multiple_polyrecs( P_Renderer *self, P_Vlist *vlist,
   for (i=0; i<vlist->length; i++) {
     runner->numcoords= 1;
     runner->type= polytype;
+    runner->free_me= 0;
     get_one_coord(runner,vlist,i);
     switch (vlist->type) {
     case P3D_CVTX:   
@@ -1479,6 +1485,7 @@ static Pnt_Polytype *get_multiple_polyrecs( P_Renderer *self, P_Vlist *vlist,
     }
     runner++;
   }
+  result->free_me= 1; /* freeing the first will free all */
 
   return(result);
 }
@@ -1638,7 +1645,7 @@ static void destroy_polyrec(Pnt_Polytype *rec)
   if (rec->ycoords) free( (P_Void_ptr)(rec->ycoords) );
   if (rec->zcoords) free( (P_Void_ptr)(rec->zcoords) );
   if (rec->color) free( (P_Void_ptr)(rec->color) );
-  free( (P_Void_ptr)rec );
+  if (rec->free_me) free( (P_Void_ptr)rec );
 }
 
 static void destroy_objecttype(P_Void_ptr primdata)

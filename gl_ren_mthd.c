@@ -79,7 +79,7 @@ This module provides renderer methods for the IRIS gl renderer
 
 #ifdef CHROMIUM
 
-#include "cr_applications.h"
+#include "chromium.h"
 #define LOAD( x ) gl##x##CR = (cr##x##Proc) glXGetProcAddressARB( "cr"#x )
 #define LOAD2( x ) gl##x##CR = (gl##x##CRProc) glXGetProcAddressARB( "gl"#x )
 
@@ -96,13 +96,22 @@ static glBarrierExecCRProc    glBarrierExecCR    = NULL;
 static glBarrierDestroyCRProc glBarrierDestroyCR = NULL;
 
 #else
-
-#define LOAD( x ) gl##x##CR = glXGetProcAddressARB( "cr"#x )
+typedef GLuint (*crCreateContextProc)( GLint window, GLint ctx );
+typedef void (*crMakeCurrentProc)( GLint window, GLint ctx );
+typedef void (*crSwapBuffersProc)( GLint window, GLint ctx );
+typedef void (*crDestroyContextProc)( GLint ctx );
+#define LOAD( x ) gl##x##CR = (cr##x##Proc)glXGetProcAddressARB( "cr"#x )
 #define LOAD2( x ) gl##x##CR = glXGetProcAddressARB( "gl"#x )
-static GLint (*glCreateContextCR)( GLint, GLint )          = NULL;
+#ifdef never
+static GLuint (*glCreateContextCR)( GLint, GLint )        = NULL;
 static void (*glMakeCurrentCR)( GLint window, GLint ctx ) = NULL;
 static void (*glSwapBuffersCR)( GLint i, GLint j )        = NULL;
 static void (*glDestroyContextCR)( GLint ctx )            = NULL;
+#endif
+static crCreateContextProc  glCreateContextCR             = NULL;
+static crMakeCurrentProc    glMakeCurrentCR               = NULL;
+static crSwapBuffersProc    glSwapBuffersCR               = NULL;
+static crDestroyContextProc glDestroyContextCR            = NULL;
 static void (*glBarrierCreateCR)( GLuint i, GLuint j)     = NULL;
 static void (*glBarrierExecCR)( GLuint i )                = NULL;
 static void (*glBarrierDestroyCR)( GLuint i )             = NULL;

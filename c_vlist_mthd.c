@@ -18,6 +18,8 @@
 This module provides the methods and generators for vlist objects.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "p3dgen.h"
 #include "pgen_objects.h"
 #include "indent.h"

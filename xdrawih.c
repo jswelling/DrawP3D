@@ -71,6 +71,8 @@ static void generate_sun_rgbmap(XdIH *self) {
   if(dbg) fprintf(stderr,"generate_sun_rgbmap\n");
   /* The actual color map will be the display's default map */
   self->map_info.colormap= self->attrib.colormap;
+  self->map_info_set= 1;
+  self->map_info_owned= 0;
   
   /* grab as many colours as possible */ 
   /* assume < 512 colours needed */ 
@@ -166,7 +168,7 @@ static void generate_sun_rgbmap(XdIH *self) {
   XStoreColors(self->dpy, self->map_info.colormap, myColors, noGrabbed); 
   
   /* Clean up */
-free(myColors);
+  free(myColors);
 }
 
 static int server_is_sun_or_hp(XdIH *self) {
@@ -215,61 +217,61 @@ static void directcolor_init(XdIH *self) {
   if (r.pixel>g.pixel) {
     if (g.pixel>b.pixel) {
       /* RGB */
-      self->map_info.red_max= 255;
-      self->map_info.red_mult= 256*256;
-      self->map_info.green_max= 255;
-      self->map_info.green_mult= 256;
-      self->map_info.blue_max= 255;
       self->map_info.blue_mult= 1;
+      self->map_info.blue_max= b.pixel/(self->map_info.blue_mult);
+      self->map_info.green_mult= b.pixel+1;
+      self->map_info.green_max= g.pixel/(self->map_info.green_mult);
+      self->map_info.red_mult= (b.pixel+1)*(g.pixel+1);
+      self->map_info.red_max= r.pixel/(self->map_info.red_mult);
     }
     else if (r.pixel>b.pixel) {
-      /* RBG */
-      self->map_info.red_max= 255;
-      self->map_info.red_mult= 256*256;
-      self->map_info.blue_max= 255;
-      self->map_info.blue_mult= 256;
-      self->map_info.green_max= 255;
+      /* RBG */ 
       self->map_info.green_mult= 1;
+      self->map_info.green_max= g.pixel/(self->map_info.green_mult);
+      self->map_info.blue_mult= g.pixel+1;
+      self->map_info.blue_max= b.pixel/(self->map_info.blue_mult);
+      self->map_info.red_mult= (b.pixel+1)*(g.pixel+1);
+      self->map_info.red_max= r.pixel/(self->map_info.red_mult);
     }
     else {
       /* BRG */
-      self->map_info.blue_max= 255;
-      self->map_info.blue_mult= 256*256;
-      self->map_info.red_max= 255;
-      self->map_info.red_mult= 256;
-      self->map_info.green_max= 255;
       self->map_info.green_mult= 1;
+      self->map_info.green_max= g.pixel/(self->map_info.green_mult);
+      self->map_info.red_mult= g.pixel+1;
+      self->map_info.red_max= r.pixel/(self->map_info.red_mult);
+      self->map_info.blue_mult= (r.pixel+1)*(g.pixel+1);
+      self->map_info.blue_max= b.pixel/(self->map_info.blue_mult);
     }
   }
   else {
     if (g.pixel>b.pixel) {
       if (b.pixel>r.pixel) {
 	/* GBR */
-	self->map_info.green_max= 255;
-	self->map_info.green_mult= 256*256;
-	self->map_info.blue_max= 255;
-	self->map_info.blue_mult= 256;
-	self->map_info.red_max= 255;
 	self->map_info.red_mult= 1;
+	self->map_info.red_max= r.pixel/(self->map_info.red_mult);
+	self->map_info.blue_mult= (r.pixel+1);
+	self->map_info.blue_max= b.pixel/(self->map_info.blue_mult);
+	self->map_info.green_mult= (r.pixel+1)*(b.pixel+1);
+	self->map_info.green_max= g.pixel/(self->map_info.green_mult);
       }
       else {
 	/* GRB */
-	self->map_info.green_max= 255;
-	self->map_info.green_mult= 256*256;
-	self->map_info.red_max= 255;
-	self->map_info.red_mult= 256;
-	self->map_info.blue_max= 255;
 	self->map_info.blue_mult= 1;
+	self->map_info.blue_max= b.pixel/(self->map_info.blue_mult);
+	self->map_info.red_mult= (b.pixel+1);
+	self->map_info.red_max= r.pixel/(self->map_info.red_mult);
+	self->map_info.green_mult= (r.pixel+1)*(b.pixel+1);
+	self->map_info.green_max= g.pixel/(self->map_info.green_mult);
       }
     }
     else {
       /* BGR */
-      self->map_info.blue_max= 255;
-      self->map_info.blue_mult= 256*256;
-      self->map_info.green_max= 255;
-      self->map_info.green_mult= 256;
-      self->map_info.red_max= 255;
       self->map_info.red_mult= 1;
+      self->map_info.red_max= r.pixel/(self->map_info.red_mult);
+      self->map_info.green_mult= (r.pixel+1);
+      self->map_info.green_max= g.pixel/(self->map_info.green_mult);
+      self->map_info.blue_mult= (r.pixel+1)*(g.pixel+1);
+      self->map_info.blue_max= b.pixel/(self->map_info.blue_mult);
     }
   }
 }
@@ -302,6 +304,7 @@ static void pseudocolor_init(XdIH *self) {
     } else {
       XStandardColormap *mymaps = XAllocStandardColormap();
       int count;
+      self->map_info_owned= 1;
       if (XGetRGBColormaps(self->dpy, RootWindow(self->dpy,self->screen), &mymaps, &count,
 			   XA_RGB_DEFAULT_MAP)) {
 	self->map_info= *mymaps; /* bitwise copy will work */
@@ -336,7 +339,7 @@ static void pseudocolor_init(XdIH *self) {
 	  }
 	} 
 	else {
-	  printf("Can't get appropriate colormap!\n");
+	  fprintf(stderr,"Can't get appropriate colormap!\n");
 	  exit(-1);
 	}
       }
@@ -344,7 +347,8 @@ static void pseudocolor_init(XdIH *self) {
     }
     self->map_info_set= 1;
   }
-  XSetWindowColormap(self->dpy, self->win, self->map_info.colormap);
+  if (self->map_info_set)
+    XSetWindowColormap(self->dpy, self->win, self->map_info.colormap);
 }
 
 static void pseudocolor_display(XdIH *self, XImage *ximage_in) {
@@ -441,6 +445,7 @@ void *xdrawih_create(Display *d_in, int s_in, Window w_in, int width, int height
   self->current_pixmap = 0;
   self->inited = False;
   self->map_info_set = 0;
+  self->map_info_owned = 0;
 
   valuemask= (GCForeground | GCBackground);
   self->gc= XCreateGC(self->dpy, self->win, valuemask, &xgcv);
@@ -536,7 +541,7 @@ void xdrawih_delete(void *XdrawImageHandler) {
     if (self->current_pixmap) XFreePixmap(self->dpy, self->current_pixmap);
     self->current_pixmap = 0; 
     if (self->gc) XFreeGC(self->dpy, self->gc);
-    XFree(&self->map_info);
+    if (self->map_info_set && self->map_info_owned) XFree(&self->map_info);
     free(self);
 }
 

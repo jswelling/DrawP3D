@@ -18,8 +18,8 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <p3dgen.h>
-#include <drawp3d.h>
+#include "p3dgen.h"
+#include "drawp3d.h"
 #include "pgen_objects.h" /* because we must access vertex list methods */
 #include "ge_error.h"
 
@@ -322,7 +322,7 @@ main()
   ERRCHK( dp_init_ren("myrenderer","vrml","test.wrl", "") );
   ERRCHK( dp_init_ren("myrenderer","p3d","test.p3d", "") );
 #endif
-  ERRCHK( dp_init_ren("myrenderer","iv","test.iv", "") );
+  ERRCHK( dp_init_ren("myrenderer","gl","", "") );
 
   /* Create a camera, according to specs given in definitions above. */
   ERRCHK( dp_camera("mycamera",&lookfrom,&lookat,&up,fovea,hither,yon) );
