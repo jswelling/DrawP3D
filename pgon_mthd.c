@@ -212,17 +212,13 @@ static void destroy( int destroy_ren_rep )
   }
 
   ger_debug("pgon_mthd: destroy");
-  fprintf(stderr,"Beginning polygon destroy of %x\n",(int)self);
 
   /* destroy renderer rep of this gob */
   if (destroy_ren_rep) WALK_RENLIST(self,destroy_polygon);
-  fprintf(stderr,"Destroy_ren_rep loop complete\n");
 
   /* destroy the gob's vlist */
   METHOD_RDY(VLIST(self));
-  fprintf(stderr,"destroy_vlist on %x\n",(int)VLIST(self));
   (*(VLIST(self)->destroy_self))();
-  fprintf(stderr,"destroy_vlist complete\n");
 
   /* Clean up local memory */
   if (self->object_data) {
