@@ -15,10 +15,15 @@
  * implied warranty.
  *****************************************************************************/
 /*
-This module provides renderer methods for the IRIS gl renderer
+This module provides renderer methods for the OpenGL/IRIS gl renderer
 */
 
 /* Notes-
+ -Handle the size info in the input string!  The code is right there, in
+  the non-OpenGL part of create_drawing_window.
+ -AUTO is a stupid abbreviation for the state of not owning the window.
+ -We need to improve the docs wrt Chromium.
+ -Modify interface so an X window can be specified, rather than a widget.
  */
 
 #include <stdio.h>
@@ -408,16 +413,19 @@ static void attach_drawing_window( P_Renderer* self )
   else {
 
     XVisualInfo *vi;
-    int attributeList[10];
+    int attributeList[20];
     unsigned int width, height;
     int x, y;
     XSetWindowAttributes swa;
     XEvent event;
     Colormap cmap;
+    int i;
     
-    attributeList[0]= GLX_RGBA;
-    attributeList[1]= GLX_DOUBLEBUFFER;
-    attributeList[2]= None;
+    i= 0;
+    attributeList[i++]= GLX_RGBA;
+    attributeList[i++]= GLX_DOUBLEBUFFER;
+    attributeList[i++]= GLX_DEPTH_SIZE; attributeList[i++]= 1;
+    attributeList[i++]= None;
     
     /* First we wait for the parent to be built */
     get_drawing_area(self, &x, &y, &width, &height); /* works since window is set to parent */
@@ -456,8 +464,6 @@ static void attach_drawing_window( P_Renderer* self )
     }
     XIfEvent(XDISPLAY(self), &event, WaitForNotify, (char*)XWINDOW(self));
   }
-
-  RENDATA(self)->initialized= 1;
 
 #endif
 #else
@@ -504,19 +510,21 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
   else {
     Display *dpy;
     Window win;
-    int n;
+    int i;
     static char* fake_argv[]= {"drawp3d",NULL};
     int fake_argc= 1;
     XVisualInfo *vi;
-    int attributeList[10];
+    int attributeList[20];
     Colormap cmap;
     GLXContext cx;
     XEvent event;
     XSetWindowAttributes swa;
 
-    attributeList[0]= GLX_RGBA;
-    attributeList[1]= GLX_DOUBLEBUFFER;
-    attributeList[2]= None;
+    i= 0;
+    attributeList[i++]= GLX_RGBA;
+    attributeList[i++]= GLX_DOUBLEBUFFER;
+    attributeList[i++]= GLX_DEPTH_SIZE; attributeList[i++]= 1;
+    attributeList[i++]= None;
 
     XDISPLAY(self)= dpy= XOpenDisplay(0);
     if (!dpy) {
@@ -526,6 +534,7 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
     if (!vi) {
       ger_fatal("create_drawing_window: unable to get a reasonable visual!");
     }
+
     GLXCONTEXT(self)= cx= glXCreateContext(dpy, vi, 0, GL_TRUE);
     if (!cx) {
       ger_fatal("create_drawing_window: unable to make a GL context!");
@@ -2379,6 +2388,12 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
 
   if (RENDATA(self)->open) {
     
+    if (!(RENDATA(self)->initialized)) {
+      set_drawing_window(self);
+      init_gl_gl(self);
+      RENDATA(self)->initialized= 1;
+    }
+
     if (primdata) {
       
       ger_debug("gl_ren_mthd: traverse_gob\n");
@@ -4132,8 +4147,8 @@ static void init_gl_gl (P_Renderer *self)
   }
 #endif
   glEnable(GL_DEPTH_TEST);
-  glShadeModel(GL_SMOOTH);
   glEnable(GL_LIGHTING);
+  glShadeModel(GL_SMOOTH);
   glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
   glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
   glEnable(GL_COLOR_MATERIAL);
