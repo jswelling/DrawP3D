@@ -27,9 +27,24 @@ This module provides renderer methods for the IRIS gl renderer
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
 #include <gl/gl.h>
+#ifndef _IBMR2
 #include <gl/sphere.h>
+#endif
 #include "gl_strct.h"
 
+/* IBM AIX misses some definitions */
+#ifndef AVOID_NURBS
+#ifndef N_V3D
+#define N_V3D 0x4c
+#endif
+#ifndef N_C4D
+#define N_C4D 0xd0
+#endif
+#ifndef N_V3DR
+#define N_V3DR 0x51
+#endif
+#endif
+     
 #define GLPROF(x)
 
 #define BLACKPATTERN 0
@@ -91,7 +106,9 @@ static float materials[N_MATERIALS][N_ENTRIES] = {
 static float initiallm[]={
     AMBIENT, .6, .6, .6,
     LOCALVIEWER, 0.0,
+#ifndef _IBMR2
     TWOSIDE, 0.0,
+#endif
     LMNULL};    
 
 static unsigned short greyPattern[16] =
@@ -283,7 +300,7 @@ static P_Void_ptr def_sphere(char *name) {
   if (RENDATA(self)->open) {
     ger_debug("gl_ren_mthd: def_sphere");
 
-#ifdef AVOID_NURBS
+#if ( AVOID_NURBS || _IBMR2 )
     METHOD_RDY(ASSIST(self));
     result= (*(ASSIST(self)->def_sphere))();
     METHOD_OUT
@@ -334,11 +351,11 @@ void mycircle(float radius, int up) {
     bgntmesh();
     n3f(nor);
     for (lupe = 0.0; lupe <= PI; lupe += inc) {
-	ver[0] = fsin(lupe)*radius;
-	ver[1] = fcos(lupe)*radius;
+	ver[0] = sin((double)lupe)*radius;
+	ver[1] = cos((double)lupe)*radius;
 	v3f(ver);
-	ver[0] = fsin(-lupe)*radius;
-	ver[1] = fcos(-lupe)*radius;
+	ver[0] = sin(-(double)lupe)*radius;
+	ver[1] = cos(-(double)lupe)*radius;
 	v3f(ver);
     }
     
@@ -583,8 +600,10 @@ static void ren_thing(P_Void_ptr primdata, P_Transform *thistrans,
 	    
 	    if (top_level_call) {
 		popmatrix();
-		swapbuffers();		
+		swapbuffers();
+#ifndef _IBMR2
 		gflush();
+#endif
 	    }
 
 	    popattributes();
@@ -1430,13 +1449,15 @@ static void set_camera(P_Void_ptr thecamera) {
     theCross.y = (looking.z*camera->up.x) - ((looking.x = (camera->lookat.x - camera->lookfrom.x))*camera->up.z);
     theCross.z = (looking.x*camera->up.y) - (looking.y*camera->up.x);
     
-    norm = sqrtf((theCross.x*theCross.x) + (theCross.y*theCross.y) + (theCross.z*theCross.z));
+    norm = sqrt((double)((theCross.x*theCross.x) 
+			 + (theCross.y*theCross.y) 
+			 + (theCross.z*theCross.z)));
     
     if (norm) {
 	if (theCross.x <= 0)
-	    result = 1800-10.0*RadtoDeg*asinf(theCross.y/norm);
+	    result = 1800-10.0*RadtoDeg*asin((double)(theCross.y/norm));
 	else
-	    result = 10.0*RadtoDeg*asinf(theCross.y/norm);	
+	    result = 10.0*RadtoDeg*asin((double)(theCross.y/norm));	
 	short_result = result;
 	LOOKANGLE(self) = short_result;
 	
@@ -1726,7 +1747,9 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   if (result & (WidthValue | HeightValue))
       prefsize(width, height);
   
+#ifndef _IBMR2
   foreground();
+#endif
   WINDOW(self) = winopen(NAME(self));
   winconstraints();
   mmode(MVIEWING);
@@ -1739,8 +1762,10 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   swapbuffers();
   zbuffer(TRUE);
   lmcolor(LMC_COLOR);
+#ifndef _IBMR2
   glcompat(GLC_ZRANGEMAP, 0);
   glcompat(GLC_OLDPOLYGON, 1);
+#endif
   lsetdepth(getgdesc(GD_ZMAX), getgdesc(GD_ZMIN));
   zfunction(ZF_GREATER);
   shademodel(GOURAUD);
@@ -1750,8 +1775,10 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   else
       defpattern(GREYPATTERN, 16, greyPattern);	  
 
+#if (!(AVOID_NURBS || _IBMR2))
   sphmode(SPH_TESS, SPH_BILIN);
   sphmode(SPH_DEPTH, 4);
+#endif
   
   /*Predefine all of our materials...*/
   
