@@ -265,6 +265,7 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
     n= 0;
     XtSetArg(args[n], XtNgeometry, 
 	     (size_info) ? size_info : DEFAULT_WINDOW_GEOMETRY); n++;
+    XtSetArg(args[n], XtNtitle, NAME(self)); n++;
     shell= XtOpenApplication(&APPCONTEXT(self), "DRawp3d",
 			     NULL, 0, &fake_argc, fake_argv, NULL,
 			     applicationShellWidgetClass, args, n);
@@ -2961,6 +2962,7 @@ static void ren_destroy() {
     METHOD_RDY(ASSIST(self));
     (*(ASSIST(self)->destroy_self))();
     
+    free( (P_Void_ptr)NAME(self) );
     free( (P_Void_ptr)BACKGROUND(self) );
     free( (P_Void_ptr)AMBIENTCOLOR(self) );
 #ifndef USE_OPENGL
@@ -3049,7 +3051,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   P_Renderer_data *rdata;
   long xsize, ysize;
   register short lupe;
-  register char *where;
+  char *where;
   int x,y,result; /*For prefposition*/
   unsigned int width, height; /*For prefsize*/
   char *name, *size;
@@ -3086,47 +3088,49 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
    in place of "s", and "t" for "title" in place of "n".
    */
 
-  name = "p3d-gl";
+  where= NULL;
+  name= (char*)malloc(strlen("p3d-gl")+1);
+  strcpy(name,"p3d-gl");
   size = NULL;
   
   if (datastr) {
-      where = (char *)malloc(strlen(datastr)+1);
-      strcpy(where, datastr);
-      for (;*where != '\0';where++)
-	  switch (*where) {
-	  case 's':
-	  case 'S':
-	  case 'g':
-	  case 'G':
-	  case 'p':
-	  case 'P':
-	      for (;(*where != '"') && (*where != '\0');where++);
-	      if (*where != '\0') {
-		  size = ++where;
-		  for (;(*where != '"') && (*where != '\0');where++);
-		  if (*where == '"')
-		      *where='\0';
-		  else
-		      where--;
-	      }
-	      break;
-	  case 'n':
-	  case 'N':
-	  case 't':
-	  case 'T':
-	      for (;(*where != '"') && (*where != '\0');where++);
-	      if (*where != '\0') {
-		  name = ++where;
-		  for (;(*where != '"') && (*where != '\0');where++);
-		  if (*where == '"')
-		      *where='\0';
-		  else
-		      where--;
-	      }
-	      break;
-	  default:
-	      break;
-	  }
+    char* size_start= NULL;
+    char* name_start= NULL;
+    where = (char *)malloc(strlen(datastr)+1);
+    strcpy(where, datastr);
+    name_start= strstr(where,"title");
+    if (!name_start) name_start= strstr(where,"TITLE");
+    if (!name_start) name_start= strstr(where,"name");
+    if (!name_start) name_start= strstr(where,"NAME");
+    size_start= strstr(where,"geom");
+    if (!size_start) size_start= strstr(where,"GEOM");
+    if (!size_start) size_start= strstr(where,"size");
+    if (!size_start) size_start= strstr(where,"SIZE");
+    if (name_start) {
+      /* Pick out title string */
+      char* tmp= NULL;
+      name_start= strchr(name_start,'"'); /* leading quote */
+      name_start++;
+      if (name_start && *name_start) {
+	tmp= strchr(name_start,'"'); /* trailing quote */
+	if (tmp) *tmp= '\0';
+	if (name) delete(name);
+	name= (char*)malloc(strlen(name_start)+1);
+	strcpy(name,name_start);
+      }
+    }
+    if (size_start) {
+      /* Pick out geom string */
+      char* tmp= NULL;
+      size_start= strchr(size_start,'"'); /* leading quote */
+      size_start++;
+      if (size_start && *size_start) {
+	tmp= strchr(size_start,'"'); /* trailing quote */
+	if (tmp) *tmp= '\0';
+	size= size_start;
+      }
+    }
+
   }
   
   NAME(self) = name;
@@ -3145,6 +3149,8 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   else {
     create_drawing_window(self, size);
   }
+
+  if (where) free((P_Void_ptr)where);
   
   return (init_gl_normal (self));
 }
