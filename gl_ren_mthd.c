@@ -59,8 +59,21 @@ FILE* debugFile= NULL;
 #include "wiregl_papi.h"
 #endif
 
-#define STRIP_MESHES 0
+/*
+ * Mesh stripping control.  If STRIP_MESHES is non-zero, an attempt will
+ * be made to convert meshes consisting entirely of triangle strips to
+ * meshes.  The search for strip "neighbors" will be STRIP_PATIENCE
+ * triangles wide, and the stripped mesh will be used rather than
+ * the original mesh if the number of strips (including length 1) is
+ * STRIP_BENEFIT * (original triangle count) or less.
+ *
+ * Stripping is time consuming, but it can greatly improve rendering speed.
+ */
+#ifndef STRIP_MESHES
+#define STRIP_MESHES 1
+#endif
 #define STRIP_PATIENCE 10000
+#define STRIP_BENEFIT 0.5
 
 /* Used only with Chromium, but it's easier to define it generally */
 #define BARRIER_BASE 100
@@ -322,9 +335,6 @@ static void attach_drawing_window( P_Renderer* self )
       sprintf(buf,"/tmp/debug_%d.t",RANK(self));
       debugFile= fopen(buf,"w");
     }
-    fprintf(debugFile,"gl_ren_mthd %d created barrier %d on %d procs\n",
-	    RANK(self), BARRIER(self), NPROCS(self));
-    fflush(debugFile);
   }
   
   GLXCONTEXT(self)= NULL;
@@ -418,7 +428,6 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
   }
   crMakeCurrentCR( 0, CRCONTEXT(self) );
   
-  fprintf(stderr,"point 1: nprocs= %d\n",NPROCS(self));
   if (NPROCS(self)>0) {
     glBarrierCreateCR(BARRIER(self), NPROCS(self));
     if (debugFile==NULL) {
@@ -426,9 +435,6 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
       sprintf(buf,"/tmp/debug_%d.t",RANK(self));
       debugFile= fopen(buf,"w");
     }
-    fprintf(debugFile,"gl_ren_mthd %d created barrier %d on %d procs\n",
-	    RANK(self), BARRIER(self), NPROCS(self));
-    fflush(debugFile);
   }
   
   GLXCONTEXT(self)= NULL;
@@ -700,7 +706,7 @@ static P_Cached_Vlist* cache_vlist( P_Renderer *self, P_Vlist *vlist )
       || (vlist->type==P3D_CVNVTX)) {
     if ( !(result->normals= 
 	   (float*)malloc( 3*result->length*sizeof(float) )) ) {
-      fprintf(stderr,"pvm_ren_mthd: cannot allocate %d bytes!\n",
+      fprintf(stderr,"gl_ren_mthd: cannot allocate %d bytes!\n",
 	      3*result->length*sizeof(float));
       exit(-1);
     }
@@ -1355,11 +1361,6 @@ static void destroy_object(P_Void_ptr the_thing) {
     float* coords;
     float* colors;
     float* normals;
-#ifdef never
-    int icrd;
-    int iclr;
-    int inrm;
-#endif
     int lupe;
     int loope;
     METHOD_IN
@@ -1383,6 +1384,7 @@ static void destroy_object(P_Void_ptr the_thing) {
       if (it->cvlist 
 	  && it->obj_info.mesh_obj.indices 
 	  && it->obj_info.mesh_obj.facet_lengths) {
+	int drawcount= 0;
 
 	facet_lengths= it->obj_info.mesh_obj.facet_lengths;
 	indices= it->obj_info.mesh_obj.indices;
@@ -1439,11 +1441,30 @@ static void destroy_object(P_Void_ptr the_thing) {
 	  glDrawElements(GL_TRIANGLES, 4*nfacets, GL_UNSIGNED_INT, indices);
 	  break;
 	case MESH_STRIP:
-	  fprintf(stderr,"Not drawing a triangle strip mesh!\n");
+	  for (loope=0; loope < nfacets; loope++) {
+	    int run;
+	    if (facet_lengths[loope]==3) {
+	      /* Try to gather up tris */
+	      run= 1;
+	      while (loope+run<nfacets) {
+		if (facet_lengths[loope+run]!=3) break;
+		run++;
+	      }
+	      glDrawElements(GL_TRIANGLES, 3*run, GL_UNSIGNED_INT, indices);
+	      indices += 3*run;
+	      loope+= run-1;
+	      drawcount++;
+	    }
+	    else {
+	      /* A real strip */
+	      glDrawElements(GL_TRIANGLE_STRIP, facet_lengths[loope], 
+			     GL_UNSIGNED_INT, indices);
+	      indices += facet_lengths[loope];
+	      drawcount++;
+	    }
+	  }
 	  break;
 	}
-	glBegin(GL_TRIANGLES);
-	glEnd();
 	
 	/* Ideally I'd return to the original state, but I can't tell what it
 	 *  was. 
@@ -2946,47 +2967,39 @@ static void destroy_object(P_Void_ptr the_thing) {
       total_indices += facet_lengths[i];
       if (facet_lengths[i] != facet_lengths[0]) mesh_type= MESH_MIXED;
     }
-    fprintf(stderr,"Here; mesh is type %d\n",mesh_type);
 #if (STRIP_MESHES != 0)
     if (mesh_type==MESH_TRI) {
-      int hits;
       int* newIndex= NULL;
       int* mark= NULL;
+      int* newLength= NULL;
       int* here;
       int odd;
       int length;
       int firstFree= 0;
       int nFree= nfacets;
-      int minLength= 1000;
-      int maxLength= 0;
-      int totLength= 0;
       int count= 0;
-      int minPatience= STRIP_PATIENCE; /* a convenient large number */;
-      int maxPatience= 0;
-      double totPatience= 0.0;
-      int countPatience= 0;
-      int prevMatchIndex= 0;
 
-      if (!(newIndex= (int*)malloc(nfacets*sizeof(int)))) 
+      if (!(newIndex= (int*)malloc(3*nfacets*sizeof(int)))) 
+	ger_fatal("def_mesh: unable to allocate %d bytes!\n",
+		  3*nfacets*sizeof(int));
+      if (!(newLength= (int*)malloc(nfacets*sizeof(int)))) 
 	ger_fatal("def_mesh: unable to allocate %d bytes!\n",
 		  nfacets*sizeof(int));
       if (!(mark= (int*)malloc(nfacets*sizeof(int)))) 
 	ger_fatal("def_mesh: unable to allocate %d bytes!\n",
 		  nfacets*sizeof(int));
       for (i=0; i<nfacets; i++) mark[i]= 0;
-      fprintf(stderr,"Don't forget to clean up memory!\n");
 
       here= newIndex;
 
       *here++= indices[3*firstFree];
       *here++= indices[3*firstFree+1];
       *here++= indices[3*firstFree+2];
-      nFree--;
       mark[firstFree]= 1;
+      nFree--;
       firstFree += 1;
       odd= 1;
-      length= 1;
-      prevMatchIndex= 0;
+      length= 3;
 
       while (nFree) {
 	/* Start a new strip on firstFree */
@@ -3030,22 +3043,13 @@ static void destroy_object(P_Void_ptr the_thing) {
 	if (i!=limit) {
 	  /* matched */
 	  mark[i]= 1;
-	  hits++;
 	  nFree--;
 	  odd= !odd;
 	  length++;
-	  if (i-prevMatchIndex > maxPatience) maxPatience= i-prevMatchIndex;
-	  if (i-prevMatchIndex < minPatience) minPatience= i-prevMatchIndex;
-	  totPatience += 
-	    ((double)(i-prevMatchIndex))*((double)(i-prevMatchIndex));
-	  countPatience++;
-	  prevMatchIndex= i;
 	}
 	else {
 	  /* start a new strip */
-	  if (length<minLength) minLength= length;
-	  if (length>maxLength) maxLength= length;
-	  totLength += length;
+	  newLength[count]= length;
 	  count += 1;
 	  while (firstFree<nfacets && mark[firstFree]) firstFree++;
 	  if (firstFree==nfacets) break;
@@ -3056,23 +3060,45 @@ static void destroy_object(P_Void_ptr the_thing) {
 	  mark[firstFree]= 1;
 	  while (firstFree<nfacets && mark[firstFree]) firstFree++;
 	  odd= 1;
-	  length= 1;
+	  length= 3;
 	  if (firstFree==nfacets) break;
 	}
-
-	if (!(count % 10000)) {
-	  fprintf(stderr,"firstFree= %d: min %d max %d mean %f on %d\n",
-		  firstFree,minLength,maxLength,
-		  (double)totLength/(double)count, count);
-	  fprintf(stderr,"     Patience: min %d max %d mean %f on %d\n",
-		  minPatience,maxPatience,
-		  sqrt(totPatience/(double)countPatience), 
-		  countPatience);
-	}
       }
-      fprintf(stderr,"Got %d hits on %d facets\n",hits,nfacets);
+      newLength[count]= length;
+      count += 1;
+      if (count<STRIP_BENEFIT*nfacets) {
+	/* OK, let's use the stripped mesh */
+	free(mark);
+	it->obj_info.mesh_obj.indices= newIndex;
+	it->obj_info.mesh_obj.facet_lengths= newLength;
+	it->obj_info.mesh_obj.nfacets= count;
+	it->obj_info.mesh_obj.type= MESH_STRIP;
+      }
+      else {
+	/* It's not worth it; cache the original info */
+	free(newIndex);
+	free(newLength);
+	free(mark);
+
+	if (!(it->obj_info.mesh_obj.indices= 
+	      (int*)malloc(total_indices*sizeof(int))))
+	  ger_fatal("def_mesh: unable to allocate %d bytes!",
+		    total_indices*sizeof(int));
+	for (i=0; i<total_indices; i++) 
+	  it->obj_info.mesh_obj.indices[i]= indices[i];
+	if (!(it->obj_info.mesh_obj.facet_lengths= 
+	      (int*)malloc(nfacets*sizeof(int))))
+	  ger_fatal("def_mesh: unable to allocate %d bytes!",
+		    nfacets*sizeof(int));
+	for (i=0; i<nfacets; i++)
+	  it->obj_info.mesh_obj.facet_lengths[i]= facet_lengths[i];
+	it->obj_info.mesh_obj.nfacets= nfacets;
+	it->obj_info.mesh_obj.type= MESH_TRI;
+	
+      }
+      it->cvlist= cache_vlist(self, vertices);
     }
-#endif
+#else
 
     /* Cache everything */
     if (!(it->obj_info.mesh_obj.indices= 
@@ -3085,7 +3111,6 @@ static void destroy_object(P_Void_ptr the_thing) {
 	  (int*)malloc(nfacets*sizeof(int))))
       ger_fatal("def_mesh: unable to allocate %d bytes!",
 		nfacets*sizeof(int));
-    mesh_type= MESH_TRI;
     for (i=0; i<nfacets; i++)
       it->obj_info.mesh_obj.facet_lengths[i]= facet_lengths[i];
     it->obj_info.mesh_obj.nfacets= nfacets;
@@ -3093,6 +3118,7 @@ static void destroy_object(P_Void_ptr the_thing) {
 
     it->cvlist= cache_vlist(self, vertices);
 
+#endif /* STRIP_MESHES != 0 */
 #endif /* USE_GL_OBJ */
     
     METHOD_OUT
