@@ -20,13 +20,17 @@ This module provides renderer methods for the IRIS gl renderer
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
+#include <X11/Intrinsic.h>
 #include "p3dgen.h"
 #include "pgen_objects.h"
 #include "ge_error.h"
 #include "assist.h"
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
+#include <gl/glws.h>
 #include <gl/gl.h>
+#include <X11/Xirisw/GlxMDraw.h>
 #ifndef _IBMR2
 #include <gl/sphere.h>
 #endif
@@ -149,6 +153,13 @@ static unsigned long gd_min; /*Value used to clear zbuffer*/
 
 /*So we don't have to realloc these EVERY TIME (primitive caching)*/
 static gl_gob *my_cylinder = NULL, *my_sphere = NULL;
+
+/* function prototypes */
+static void new_widget_cb (Widget w, P_Renderer *self, XtPointer call_data);
+static void gl_resize_cb(Widget w, P_Renderer *self, XtPointer call_data);
+P_Renderer *init_gl_normal (P_Renderer *self);
+void init_gl_widget (P_Renderer *self); 
+
 
 static void destroy_object(P_Void_ptr the_thing) {
     /*Destroys any object.*/
@@ -529,7 +540,11 @@ static void ren_thing(P_Void_ptr primdata, P_Transform *thistrans,
     ger_debug("gl_ren_mthd: ren_gob\n");
     
     if (RENDATA(self)->open) {
-	winset(WINDOW(self));
+	if (!AUTO (self))
+		winset(WINDOW(self));
+	else
+		GLXwinset (XtDisplay (WIDGET (self)), XtWindow (WIDGET (self)));
+
 	if (primdata) {
 	    P_Gob *thisgob;
 	    int error=0,color_mode=1;
@@ -628,7 +643,11 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
     METHOD_IN
 	
 	if (RENDATA(self)->open) {
-	    winset(WINDOW(self));
+		if (!AUTO (self))
+		    winset(WINDOW(self));
+		else
+			GLXwinset (XtDisplay (WIDGET (self)), XtWindow (WIDGET (self)));
+
 	    if (primdata) {
 		
 		ger_debug("gl_ren_mthd: traverse_gob\n");
@@ -1434,6 +1453,11 @@ static void set_camera(P_Void_ptr thecamera) {
     /*Well, it was stashed, and now we get to use it.
       Happy Happy Joy Joy.*/
     
+    if (!AUTO (self))
+		winset(WINDOW(self));
+	else
+		GLXwinset (XtDisplay (WIDGET (self)), XtWindow (WIDGET (self)));
+
     winset(WINDOW(self));
 
     perspective(10*(camera->fovea), ASPECT(self), (0-(camera->hither)), (0-(camera->yon)));
@@ -1569,7 +1593,8 @@ static void ren_destroy() {
     P_Renderer *self=(P_Renderer *)po_this;
     METHOD_IN
 
-    winclose(WINDOW(self));
+    if (!AUTO (self))
+	    winclose(WINDOW(self));
 
     ger_debug("gl_ren_mthd: ren_destroy\n");
 
@@ -1675,6 +1700,11 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
     ger_fatal("po_create_gl_renderer: unable to allocate %d bytes!",
               sizeof(P_Renderer_data) );
   self->object_data= (P_Void_ptr)rdata;
+
+	if (strstr (device, "widget=") != NULL) {
+		AUTO (self) = 1;
+	}
+
   
   /*parse the datastr string*/
   /*At present, because we only take "name" and "size" arguments,
@@ -1731,7 +1761,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   /*Define window, set up zbuffer, set paging, etc etc etc...*/
   
   /*start by parsing the size into a geometry spec...*/
-  if (size)
+  if (!AUTO (self) && size)
       result = XParseGeometry(size, &x, &y, &width, &height);
   else
       result = 0;
@@ -1746,17 +1776,53 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
 
   if (result & (WidthValue | HeightValue))
       prefsize(width, height);
+
+	if (AUTO (self)) {
+		char *ptr;
+
+		device = strstr (device, "widget=");
+          ptr = strchr (device, '=');
+          WIDGET(self) = (Widget) atoi (ptr + 1);
+          /* if widget already exists .. we are fine */
+          if (XtIsRealized (WIDGET (self))) {
+               GLXwinset (XtDisplay (WIDGET (self)),
+                         XtWindow (WIDGET (self)));
+               RENDATA (self)->initialized = 1;
+
+               XtAddCallback (WIDGET (self), GlxNresizeCallback,
+                         (XtCallbackProc) gl_resize_cb, (XtPointer) self);
+          }
+          /* creation of widget is still pending */
+          else {
+RENDATA (self)->initialized = 0;
+               XtAddCallback (WIDGET (self), GlxNginitCallback,
+                         (XtCallbackProc) new_widget_cb, (XtPointer) self);
+               XtAddCallback (WIDGET (self), GlxNresizeCallback,
+                         (XtCallbackProc) gl_resize_cb, (XtPointer) self);
+
+               return (init_gl_normal (self));
+
+          }
+	}
   
 #ifndef _IBMR2
   foreground();
 #endif
-  WINDOW(self) = winopen(NAME(self));
-  winconstraints();
+
+	if (!AUTO (self)) {
+		WINDOW(self) = winopen(NAME(self));
+		winconstraints();
+	}
+
   mmode(MVIEWING);
   doublebuffer();
   RGBmode();
   subpixel(TRUE);
-  gconfig();
+
+	if (!AUTO (self)) {
+		gconfig();
+	}
+
   cpack(0);
   clear();
   swapbuffers();
@@ -1782,100 +1848,197 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   
   /*Predefine all of our materials...*/
   
+  getsize(&xsize, &ysize);
+  ASPECT(self)= (float)xsize / (float)ysize;
+
   for (lupe=0; lupe < N_MATERIALS; lupe++)
       lmdef(DEFMATERIAL, lupe+1, 5, materials[lupe]);
 
-  getsize(&xsize, &ysize);
-  ASPECT(self)= (float)xsize / (float)ysize;
-  
-  BACKGROUND(self) = (float *)(malloc(3*sizeof(float)));
-  AMBIENTCOLOR(self) = (float *)(malloc(3*sizeof(float)));
-  LM(self) = (float *)(malloc(9*sizeof(float)));
-
-  for (lupe = 0; lupe < 9; lupe++)
-      LM(self)[lupe] = initiallm[lupe];
-    
-  ASSIST(self)= po_create_assist(self);
-
-  BACKCULLSYMBOL(self)= create_symbol("backcull");
-  TEXTHEIGHTSYMBOL(self)= create_symbol("text-height");
-  COLORSYMBOL(self)= create_symbol("color");
-  MATERIALSYMBOL(self)= create_symbol("material");
-  CURMATERIAL(self) = 0;
-  MAXDLIGHTCOUNT(self) = MAXLIGHTS;
-  DLIGHTCOUNT(self) = LIGHT0;
-  DLIGHTBUFFER(self) = NULL;
-
-  /* Fill in all the methods */
-  self->def_sphere= def_sphere;
-  self->ren_sphere= ren_object;
-  self->destroy_sphere= destroy_object;
-
-  self->def_cylinder= def_cylinder;
-  self->ren_cylinder= ren_object;
-  self->destroy_cylinder= destroy_object;
-
-  self->def_torus= def_torus;
-  self->ren_torus= ren_object;
-  self->destroy_torus= destroy_object;
-
-  self->def_polymarker= def_polymarker;
-  self->ren_polymarker= ren_object;
-  self->destroy_polymarker= destroy_object;
-
-  self->def_polyline= def_polyline;
-  self->ren_polyline= ren_object;
-  self->destroy_polyline= destroy_object;
-
-  self->def_polygon= def_polygon;
-  self->ren_polygon= ren_object;
-  self->destroy_polygon= destroy_object;
-
-  self->def_tristrip= def_tristrip;
-  self->ren_tristrip= ren_object;
-  self->destroy_tristrip= destroy_object;
-
-  self->def_bezier= def_bezier;
-  self->ren_bezier= ren_object;
-  self->destroy_bezier= destroy_object;
-
-  self->def_mesh= def_mesh;
-  self->ren_mesh= ren_object;
-  self->destroy_mesh= destroy_object;
-
-  self->def_text= def_text;
-  self->ren_text= ren_text;
-  self->destroy_text= destroy_text;
-
-  self->def_light= def_light;
-  self->ren_light= ren_light;
-  self->light_traverse_light= traverse_light;
-  self->destroy_light= destroy_light;
-
-  self->def_ambient= def_ambient;
-  self->ren_ambient= ren_ambient;
-  self->light_traverse_ambient= traverse_ambient;
-  self->destroy_ambient= destroy_ambient;
-
-  self->def_gob= def_gob;
-  self->ren_gob= ren_gob;
-  self->light_traverse_gob= traverse_gob;
-  self->hold_gob= hold_gob;
-  self->unhold_gob= unhold_gob;
-  self->destroy_gob= destroy_gob;
-
-  self->print= ren_print;
-  self->open= ren_open;
-  self->close= ren_close;
-  self->destroy_self= ren_destroy;
-
-  self->def_camera= def_camera;
-  self->set_camera= set_camera;
-  self->destroy_camera= destroy_camera;
-
-  self->def_cmap= def_cmap;
-  self->install_cmap= install_cmap;
-  self->destroy_cmap= destroy_cmap;
-
-  return( self );
+  return (init_gl_normal (self));
 }
+
+/* complete gl initalization (note: no actual gl calls here) */
+P_Renderer *init_gl_normal (P_Renderer *self)
+{
+     register short lupe;
+
+     BACKGROUND(self) = (float *)(malloc(3*sizeof(float)));
+     AMBIENTCOLOR(self) = (float *)(malloc(3*sizeof(float)));
+     LM(self) = (float *)(malloc(9*sizeof(float)));
+
+     for (lupe = 0; lupe < 9; lupe++)
+          LM(self)[lupe] = initiallm[lupe];
+
+     ASSIST(self)= po_create_assist(self);
+
+     BACKCULLSYMBOL(self)= create_symbol("backcull");
+     TEXTHEIGHTSYMBOL(self)= create_symbol("text-height");
+     COLORSYMBOL(self)= create_symbol("color");
+     MATERIALSYMBOL(self)= create_symbol("material");
+     CURMATERIAL(self) = 0;
+     MAXDLIGHTCOUNT(self) = MAXLIGHTS;
+     DLIGHTCOUNT(self) = LIGHT0;
+     DLIGHTBUFFER(self) = NULL;
+
+     /* Fill in all the methods */
+     self->def_sphere= def_sphere;
+     self->ren_sphere= ren_object;
+     self->destroy_sphere= destroy_object;
+
+     self->def_cylinder= def_cylinder;
+     self->ren_cylinder= ren_object;
+     self->destroy_cylinder= destroy_object;
+
+     self->def_torus= def_torus;
+     self->ren_torus= ren_object;
+     self->destroy_torus= destroy_object;
+
+     self->def_polymarker= def_polymarker;
+     self->ren_polymarker= ren_object;
+     self->destroy_polymarker= destroy_object;
+
+     self->def_polyline= def_polyline;
+     self->ren_polyline= ren_object;
+     self->destroy_polyline= destroy_object;
+
+     self->def_polygon= def_polygon;
+     self->ren_polygon= ren_object;
+     self->destroy_polygon= destroy_object;
+
+     self->def_tristrip= def_tristrip;
+     self->ren_tristrip= ren_object;
+     self->destroy_tristrip= destroy_object;
+
+     self->def_bezier= def_bezier;
+     self->ren_bezier= ren_object;
+     self->destroy_bezier= destroy_object;
+
+     self->def_mesh= def_mesh;
+     self->ren_mesh= ren_object;
+     self->destroy_mesh= destroy_object;
+
+     self->def_text= def_text;
+     self->ren_text= ren_text;
+     self->destroy_text= destroy_text;
+
+     self->def_light= def_light;
+     self->ren_light= ren_light;
+     self->light_traverse_light= traverse_light;
+     self->destroy_light= destroy_light;
+
+     self->def_ambient= def_ambient;
+     self->ren_ambient= ren_ambient;
+     self->light_traverse_ambient= traverse_ambient;
+     self->destroy_ambient= destroy_ambient;
+
+     self->def_gob= def_gob;
+     self->ren_gob= ren_gob;
+     self->light_traverse_gob= traverse_gob;
+     self->hold_gob= hold_gob;
+     self->unhold_gob= unhold_gob;
+     self->destroy_gob= destroy_gob;
+
+     self->print= ren_print;
+     self->open= ren_open;
+     self->close= ren_close;
+     self->destroy_self= ren_destroy;
+
+     self->def_camera= def_camera;
+     self->set_camera= set_camera;
+     self->destroy_camera= destroy_camera;
+
+     self->def_cmap= def_cmap;
+     self->install_cmap= install_cmap;
+     self->destroy_cmap= destroy_cmap;
+
+     return (self);
+}
+
+
+static void new_widget_cb (Widget w, P_Renderer *self, XtPointer call_data)
+{
+     if (!RENDATA (self)->initialized) {
+          GLXwinset (XtDisplay (w), XtWindow (w));
+          init_gl_widget (self);
+          RENDATA (self)->initialized = 1;
+     }
+}
+
+static void gl_resize_cb (Widget w, P_Renderer *self, XtPointer call_data)
+{
+     long xsize, ysize;
+     GlxDrawCallbackStruct *glx = (GlxDrawCallbackStruct *) call_data;
+
+     getsize (&xsize, &ysize);
+     ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
+
+     GLXwinset (XtDisplay (w), XtWindow (w));
+
+     viewport (0, glx->width + 1, 0, glx->height + 1);
+}
+
+/* gl calls necessary to complete drawp3d initalization
+     after the widget is realized
+*/
+void init_gl_widget (P_Renderer *self)
+{
+     register short lupe;
+     long xsize, ysize;
+
+     RENDATA (self)->initialized = 1;
+     foreground ();
+     mmode (MVIEWING);
+     doublebuffer ();
+     RGBmode ();
+     subpixel (TRUE);
+     cpack (0);
+     clear ();
+     swapbuffers ();
+     zbuffer (TRUE);
+     lmcolor (LMC_COLOR);
+
+     glcompat (GLC_ZRANGEMAP, 0);
+     glcompat (GLC_OLDPOLYGON, 1);
+
+     lsetdepth (getgdesc (GD_ZMAX), getgdesc (GD_ZMIN));
+     zfunction (ZF_GREATER);
+     shademodel (GOURAUD);
+     gd_min = getgdesc (GD_ZMIN);
+
+     if (hastransparent = getgdesc (GD_BLEND))
+          blendfunction (BF_SA, BF_MSA);
+     else
+          defpattern (GREYPATTERN, 16, greyPattern);
+
+#if (!(AVOID_NURBS || _IBMR2))
+     sphmode (SPH_TESS, SPH_BILIN);
+     sphmode (SPH_DEPTH, 4);
+#endif
+
+     /*Predefine all of our materials...*/
+
+     for (lupe = 0; lupe < N_MATERIALS; lupe++)
+          lmdef(DEFMATERIAL, lupe+1, 5, materials[lupe]);
+
+     getsize (&xsize, &ysize);
+     ASPECT (self)= (float) xsize / (float) ysize;
+
+     BACKGROUND(self) = (float *)(malloc(3*sizeof(float)));
+     AMBIENTCOLOR(self) = (float *)(malloc(3*sizeof(float)));
+     LM(self) = (float *)(malloc(9*sizeof(float)));
+
+     for (lupe = 0; lupe < 9; lupe++)
+          LM(self)[lupe] = initiallm[lupe];
+
+     ASSIST(self)= po_create_assist(self);
+
+     BACKCULLSYMBOL(self)= create_symbol("backcull");
+     TEXTHEIGHTSYMBOL(self)= create_symbol("text-height");
+     COLORSYMBOL(self)= create_symbol("color");
+     MATERIALSYMBOL(self)= create_symbol("material");
+     CURMATERIAL(self) = 0;
+     MAXDLIGHTCOUNT(self) = MAXLIGHTS;
+     DLIGHTCOUNT(self) = LIGHT0;
+     DLIGHTBUFFER(self) = NULL;
+}
+
