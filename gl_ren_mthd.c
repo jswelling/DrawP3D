@@ -1337,8 +1337,8 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
 	      icrd= 3* *indices;
 	      inrm= 3* *indices;
 	      nor[0] = normals[inrm];
-	      nor[1] = normals[inrm];
-	      nor[2] = normals[inrm];
+	      nor[1] = normals[inrm+1];
+	      nor[2] = normals[inrm+2];
 	      vtx[0] = coords[icrd];
 	      vtx[1] = coords[icrd+1];
 	      vtx[2] = coords[icrd+2];
@@ -2802,7 +2802,27 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
 #else /* ifdef USE_GL_OBJ */
 
 #ifdef USE_OPENGL
-    it->color_mode= 0;
+    switch (vertices->type) {
+    case P3D_CNVTX:  /*Fixed for std. gobs*/
+    case P3D_CCNVTX:
+    case P3D_CVNVTX: /*Fixed*/
+    case P3D_CVTX:
+#ifdef USE_OPENGL
+      it->color_mode = 1;
+#else
+      it->color_mode = LMC_AD;
+#endif
+      break;
+    case P3D_CCVTX:
+    case P3D_CVVTX:  /*Fixed*/
+    case P3D_CVVVTX:
+#ifdef USE_OPENGL
+      it->color_mode = 0;
+#else
+      it->color_mode = LMC_COLOR;
+#endif
+      break;
+    }
     it->obj_info.obj= (GLuint)0;
 #else
     it->color_mode= LMC_COLOR;
