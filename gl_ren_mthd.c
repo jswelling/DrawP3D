@@ -31,7 +31,7 @@ This module provides renderer methods for the IRIS gl renderer
 #include "gl_strct.h"
 
 #define GLPROF(x)
-    
+
 #define BLACKPATTERN 0
 #define GREYPATTERN 1
 
@@ -492,13 +492,14 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
       METHOD_OUT
       return((P_Void_ptr)it);
 #endif
+#undef rad
   }
   METHOD_OUT
   return((P_Void_ptr)0);
 }
 
-static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
-		P_Attrib_List *thisattrlist) {
+static void ren_thing(P_Void_ptr primdata, P_Transform *thistrans,
+		P_Attrib_List *thisattrlist, int do_it) {
     
     /*This routine exists to clear the screen and zbuffer before rendering,
       and to swapbuffers and gflush afterwords.*/
@@ -559,8 +560,12 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 		pushattributes();
 		pushmatrix();
 		METHOD_RDY(kidlist->gob);
-		(*(kidlist->gob->render_to_ren))(self, (P_Transform *)0,
-						 (P_Attrib_List *)0);
+		if (do_it)
+		    (*(kidlist->gob->render_to_ren))(self, (P_Transform *)0,
+						     (P_Attrib_List *)0);
+		else
+		    (*(kidlist->gob->traverselights_to_ren))
+			(self,(P_Transform *)0,(P_Attrib_List *)0);
 		kidlist= kidlist->next;
 		popmatrix();
 		popattributes();
@@ -589,6 +594,11 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
     METHOD_OUT
 }
 
+static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
+		P_Attrib_List *thisattrlist) {
+    ren_thing(primdata, thistrans, thisattrlist, TRUE);
+}
+
 static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
                     P_Attrib_List *thisattrlist )
 /* This routine traverses a gob looking for lights. */
@@ -601,7 +611,7 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
 	if (RENDATA(self)->open) {
 	    winset(WINDOW(self));
 	    if (primdata) {
-
+		
 		ger_debug("gl_ren_mthd: traverse_gob\n");
 		
 		/*First, check to see if this lighting gob has already been
@@ -633,7 +643,7 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
 		if ( thisgob->has_transform )
 		    ren_transform(thisgob->trans);
 
-		ren_gob((P_Void_ptr)thisgob, (P_Transform *)0, (P_Attrib_List *)0);
+		ren_thing((P_Void_ptr)thisgob, (P_Transform *)0, (P_Attrib_List *)0, FALSE);
 		popmatrix();
 		
 		/*Now the ambient lighting should be set...*/
@@ -1219,7 +1229,7 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
     return ((P_Void_ptr)light_no++);
 }
 
-void ren_light(P_Void_ptr it, P_Transform *foo,
+void traverse_light(P_Void_ptr it, P_Transform *foo,
 			      P_Attrib_List *bar) {
 
     P_Renderer *self = (P_Renderer *)po_this;
@@ -1231,7 +1241,7 @@ void ren_light(P_Void_ptr it, P_Transform *foo,
 	return;
     }
 
-    ger_debug("gl_ren_mthd: ren_light");
+    ger_debug("gl_ren_mthd: traverse_light");
     
     /*Okay... let's figure out how many lights are in use...
      and quit if we have too many...*/
@@ -1241,6 +1251,12 @@ void ren_light(P_Void_ptr it, P_Transform *foo,
     lmbind(DLIGHTCOUNT(self)++, the_light);
     
     METHOD_OUT
+}
+
+void ren_light(P_Void_ptr it, P_Transform *foo,
+	       P_Attrib_List *bar) {
+
+    /*Hmm... let's just do nothing, for now...*/
 }
 
 void destroy_light(P_Void_ptr it) {
@@ -1278,7 +1294,7 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
     return ((P_Void_ptr)color);
 }
 
-void ren_ambient(P_Void_ptr it, P_Transform *foo,
+void traverse_ambient(P_Void_ptr it, P_Transform *foo,
 			      P_Attrib_List *bar) {
 
     P_Color *color = (P_Color *)it;
@@ -1303,6 +1319,12 @@ void ren_ambient(P_Void_ptr it, P_Transform *foo,
     ger_debug("gl_ren_mthd: ren_ambient");
     
     METHOD_OUT
+}
+
+void ren_ambient(P_Void_ptr it, P_Transform *foo,
+	       P_Attrib_List *bar) {
+
+    /*Hmm... let's just do nothing, for now...*/
 }
 
 void destroy_ambient(P_Void_ptr it) {
@@ -1800,12 +1822,12 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
 
   self->def_light= def_light;
   self->ren_light= ren_light;
-  self->light_traverse_light= ren_light;
+  self->light_traverse_light= traverse_light;
   self->destroy_light= destroy_object;
 
   self->def_ambient= def_ambient;
   self->ren_ambient= ren_ambient;
-  self->light_traverse_ambient= ren_ambient;
+  self->light_traverse_ambient= traverse_ambient;
   self->destroy_ambient= destroy_ambient;
 
   self->def_gob= def_gob;
