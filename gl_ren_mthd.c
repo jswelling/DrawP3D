@@ -2132,7 +2132,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 #if defined(WIREGL)
 	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
 #elif defined(CHROMIUM)
-	if (NPROCS(self)>0) glBarrierExecCR(BARRIER(self));
+	if (NPROCS(self)>0) glBarrierExecCR(MASTER_BARRIER);
 #endif
 	GLPROF("BuildingCoordTrans")
 	glPushMatrix();
