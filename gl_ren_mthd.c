@@ -1391,53 +1391,74 @@ static void destroy_object(P_Void_ptr the_thing) {
 	colors= it->cvlist->colors;
 	normals= it->cvlist->normals;
 
-	fprintf(stderr,"%d facets\n",nfacets);
-	if (it->obj_info.mesh_obj.type == MESH_TRI) {
 #ifdef USE_OPENGL
-	  glBegin(GL_TRIANGLES);
-#else
-	  bgntmesh();
-#endif
-	  for (loope=0; loope < nfacets; loope++) 
-	    for (lupe=0;lupe < facet_lengths[loope]; lupe++, indices++)
-	      sendVertex(it->cvlist->type, *indices, coords, colors, normals);
-	  
-#ifdef USE_OPENGL
-	  glEnd();
-#else
-	  endtmesh();
-#endif
+	switch (it->cvlist->type) {
+	case P3D_CVTX:
+	  glEnableClientState(GL_VERTEX_ARRAY);
+	  glVertexPointer(3, GL_FLOAT, 0, coords);
+	  glDisableClientState(GL_COLOR_ARRAY);
+	  glDisableClientState(GL_NORMAL_ARRAY);
+	  break;
+	case P3D_CCVTX:
+	  glEnableClientState(GL_VERTEX_ARRAY);
+	  glVertexPointer(3, GL_FLOAT, 0, coords);
+	  glEnableClientState(GL_COLOR_ARRAY);
+	  glColorPointer(4, GL_FLOAT, 0, colors);
+	  glDisableClientState(GL_NORMAL_ARRAY);
+	  break;
+	  glEnableClientState(GL_COLOR_ARRAY);
+	case P3D_CCNVTX:
+	  glEnableClientState(GL_VERTEX_ARRAY);
+	  glVertexPointer(3, GL_FLOAT, 0, coords);
+	  glEnableClientState(GL_COLOR_ARRAY);
+	  glColorPointer(4, GL_FLOAT, 0, colors);
+	  glEnableClientState(GL_NORMAL_ARRAY);
+	  glNormalPointer(GL_FLOAT, 0, normals);
+	  break;
+	case P3D_CNVTX:
+	  glEnableClientState(GL_VERTEX_ARRAY);
+	  glVertexPointer(3, GL_FLOAT, 0, coords);
+	  glDisableClientState(GL_COLOR_ARRAY);
+	  glEnableClientState(GL_NORMAL_ARRAY);
+	  glNormalPointer(GL_FLOAT, 0, normals);
+	  break;
+	default:
+	  ger_error("Error: ren_mesh: unsupported vertex type %d!\n", it->cvlist->type);
 	}
-	else {
+	switch (it->obj_info.mesh_obj.type) {
+	case MESH_MIXED:
 	  for (loope=0; loope < nfacets; loope++) {
-
-#ifdef USE_OPENGL
-	    if (*facet_lengths == 3)
-	      glBegin(GL_TRIANGLES);
-	    else if (*facet_lengths == 4)
-	      glBegin(GL_QUADS);
-	    else
-	      glBegin(GL_POLYGON);
-#else
-	    if (*facet_lengths == 3)
-	      bgntmesh();
-	    else
-	      bgnpolygon();
-#endif
-	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++)
-	      sendVertex(it->cvlist->type, *indices, coords, colors, normals);
-	    
-#ifdef USE_OPENGL
-	    glEnd();
-#else
-	    if (*facet_lengths == 3)
-	      endtmesh();
-	    else
-	      endpolygon();
-#endif
+	    glDrawElements(GL_POLYGON, facet_lengths[loope], GL_UNSIGNED_INT, indices);
+	    indices += facet_lengths[loope];
 	  }
-	  facet_lengths++;
+	  break;
+	case MESH_TRI:
+	  glDrawElements(GL_TRIANGLES, 3*nfacets, GL_UNSIGNED_INT, indices);
+	  break;
+	case MESH_QUAD:
+	  glDrawElements(GL_TRIANGLES, 4*nfacets, GL_UNSIGNED_INT, indices);
+	  break;
+	case MESH_STRIP:
+	  fprintf(stderr,"Not drawing a triangle strip mesh!\n");
+	  break;
 	}
+	glBegin(GL_TRIANGLES);
+	glEnd();
+	
+	/* Ideally I'd return to the original state, but I can't tell what it
+	 *  was. 
+	 */
+#else
+
+	for (loope=0; loope < nfacets; loope++) {
+	  bgnpolygon();
+	  for (lupe=0;lupe < facet_lengths[loope]; lupe++, indices++)
+	    sendVertex(it->cvlist->type, *indices, coords, colors, normals);
+	  endpolygon();
+	}
+	  
+#endif
+
       }
       else ger_error("gl_ren_mthd: ren_mesh: null mesh info found!");
       ren_prim_finish( transform, screendoor_set );
