@@ -570,11 +570,16 @@ static void ren_thing(P_Void_ptr primdata, P_Transform *thistrans,
 	     * ren_gob, as opposed to a recursive call.
 	     */
 	    if (thistrans) {
+	        unsigned long cval;
 		top_level_call = 1;
 		lmcolor(LMC_COLOR);
 		back = BACKGROUND(self);
+		cval= ((int)((back[0]*255)+0.5))
+		      | (((int)((back[1]*255)+0.5)) << 8)
+		      | (((int)((back[2]*255)+0.5)) << 16)
+		      | (((int)((back[3]*255)+0.5)) << 24);
 		GLPROF("Clearing");
-		czclear((back[0]*256)+((back[1]*255)*256)+((back[2]*255)*65536), gd_min);
+		czclear(cval, gd_min);
 		pushmatrix();
 		lookat(LOOKFROM(self).x, LOOKFROM(self).y, LOOKFROM(self).z,
 		       LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z,
@@ -1447,7 +1452,6 @@ static void set_camera(P_Void_ptr thecamera) {
 	return;
     }
 	
-
     ger_debug("gl_ren_mthd: set_camera\n");
 
     /*Well, it was stashed, and now we get to use it.
@@ -1478,19 +1482,21 @@ static void set_camera(P_Void_ptr thecamera) {
 			 + (theCross.z*theCross.z)));
     
     if (norm) {
-	if (theCross.x <= 0)
-	    result = 1800-10.0*RadtoDeg*asin((double)(theCross.y/norm));
-	else
-	    result = 10.0*RadtoDeg*asin((double)(theCross.y/norm));	
-	short_result = result;
-	LOOKANGLE(self) = short_result;
-	
+      result = 10.0*RadtoDeg*asin((double)(theCross.y/norm));	
+      if ( !(((looking.z <= 0.0) && (theCross.x >= 0.0))
+	  || ((looking.z >= 0.0) && (theCross.x <= 0.0))) ) {
+	result= 1800 - result;
+      }
+      short_result = (short)(result+0.5);
+      LOOKANGLE(self) = short_result;
+
 	/*Don't ask me how I came up with the angle.*/
 	/*It's quite messy.*/
     }
     else
 	ger_error("gl_ren_mthd: set_camera: up vector is parallel to \
                    viewing vector; setting up angle to %d.", LOOKANGLE(self));
+
     BACKGROUND(self)[0] = camera->background.r;
     BACKGROUND(self)[1] = camera->background.g;
     BACKGROUND(self)[2] = camera->background.b;
@@ -1701,10 +1707,10 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
               sizeof(P_Renderer_data) );
   self->object_data= (P_Void_ptr)rdata;
 
-	if (strstr (device, "widget=") != NULL) {
-		AUTO (self) = 1;
-	}
-
+  if (strstr (device, "widget=") != NULL) {
+    AUTO (self) = 1;
+  }
+  else AUTO(self)= 0;
   
   /*parse the datastr string*/
   /*At present, because we only take "name" and "size" arguments,
