@@ -26,9 +26,12 @@ This module provides renderer methods for the IRIS gl renderer
 #include "assist.h"
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
+#include <gl/gl.h>
+#include <gl/sphere.h>
 #include "gl_strct.h"
-#include "gl_incl.h"
 
+#define GLPROF(x)
+    
 #define BLACKPATTERN 0
 #define GREYPATTERN 1
 
@@ -87,8 +90,8 @@ static float materials[N_MATERIALS][N_ENTRIES] = {
 
 static float initiallm[]={
     AMBIENT, .6, .6, .6,
-    LOCALVIEWER, 1.0,
-    TWOSIDE, 1,
+    LOCALVIEWER, 0.0,
+    TWOSIDE, 0.0,
     LMNULL};    
 
 static unsigned short greyPattern[16] =
@@ -126,11 +129,9 @@ static unsigned long gd_min; /*Value used to clear zbuffer*/
 #define CYL_ORDERY      6
 #define CYL_NUMPOINTSX	(CYL_NUMKNOTSX - CYL_ORDERX)
 #define CYL_NUMPOINTSY	(CYL_NUMKNOTSY - CYL_ORDERY)
-#define CYL_CAPKNOTS    8
-#define CYL_CAPORDER    4
-#define CYL_CAPNUMPOINTS (CYL_CAPKNOTS - CYL_CAPORDER)
 
-static gl_gob *my_cylinder = NULL; /*So we don't have to realloc it EVERY TIME*/
+/*So we don't have to realloc these EVERY TIME (primitive caching)*/
+static gl_gob *my_cylinder = NULL, *my_sphere = NULL;
 
 static void destroy_object(P_Void_ptr the_thing) {
     /*Destroys any object.*/
@@ -142,13 +143,19 @@ static void destroy_object(P_Void_ptr the_thing) {
 
     ger_debug("gl_ren_mthd: destroy_object\n");
 
-    if (it == my_cylinder)
+    if (it == my_cylinder) {
+	METHOD_OUT
 	return;
+    }
 
+    if (it == my_sphere) {
+	METHOD_OUT
+	return;
+    }
+    
     if (it) {
 	if (isobj(it->obj))
-	    delobj(it->obj);
-	
+	    delobj(it->obj);	
 	free((void *)it);
     }
     METHOD_OUT
@@ -269,25 +276,80 @@ static P_Void_ptr def_sphere(char *name) {
     /*Define a unit sphere at the origin and return it.*/
     
   P_Renderer *self= (P_Renderer *)po_this;
+  gl_gob *it;
   P_Void_ptr result;
   METHOD_IN
 
   if (RENDATA(self)->open) {
     ger_debug("gl_ren_mthd: def_sphere");
 
+#ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
     result= (*(ASSIST(self)->def_sphere))();
-
     METHOD_OUT
     return( (P_Void_ptr)result );
+#else
+    if (my_sphere) {
+	METHOD_OUT
+	return((P_Void_ptr)my_sphere);
+    }
+
+    if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
+	ger_fatal("def_sphere: unable to allocate %d bytes!", sizeof(gl_gob));
+    
+    sphobj( it->obj=genobj() );
+    /*As of now, we've defined the object. Aren't libraries wonderfull?*/
+
+    it->color_mode = LMC_AD;
+    my_sphere = it;
+    METHOD_OUT
+    return((P_Void_ptr)it);
+
+#endif
   }
+  
   METHOD_OUT
   return((P_Void_ptr)0);
+}
+
+void mycircle(float radius, int up) {
+    /*Necessary for def_cylinder to work
+      properly: draws a circle of radius radius
+      in the xy plane at the origin.*/
+    
+#define NSIDES 20.0
+    
+    register float lupe, inc;
+    float ver[3], nor[3];
+
+    ver[2] = 0;
+    inc = ((2.0*PI)/NSIDES);
+
+    nor[0] = nor[1] = 0;
+    if (up)
+	nor[2] = 1;
+    else
+	nor[2] = -1;
+    
+    bgntmesh();
+    n3f(nor);
+    for (lupe = 0.0; lupe <= PI; lupe += inc) {
+	ver[0] = fsin(lupe)*radius;
+	ver[1] = fcos(lupe)*radius;
+	v3f(ver);
+	ver[0] = fsin(-lupe)*radius;
+	ver[1] = fcos(-lupe)*radius;
+	v3f(ver);
+    }
+    
+    endtmesh();
+#undef NSIDES
 }
 
 static P_Void_ptr def_cylinder(char *name) {
 	  
 P_Renderer *self= (P_Renderer *)po_this;
+P_Void_ptr result;
 gl_gob *it;
 METHOD_IN
 
@@ -300,84 +362,41 @@ METHOD_IN
 	  -1., -1., -1., -1., -1., -1., 1., 1., 1., 1., 1., 1.
 	  };
 
-      double capknots[CYL_CAPKNOTS] = {
-	  -1., -1., -1., -1., 1., 1., 1., 1.
-	  };
-
-#define CON1 .8875
-#define CON2 1.1
-#define CON3 .275
-#define CON4 .4763
-
-double ctlpoints[CYL_NUMPOINTSY][CYL_NUMPOINTSX * CYL_NUMCOORDS] = {
-    -.5,  0.0,  0.0,
-    -.5,  0.0,  1.0,
-    
-    -.5,  -CON1,  0.0,
-    -.5,  -CON1,  1.0,
-    
-    CON2,  -CON1,  0.0,
-    CON2,  -CON1,  1.0,
-    
-    CON2, CON1,  0.0,
-    CON2, CON1,  1.0,
-    
-    -.5, CON1,  0.0,
-    -.5, CON1,  1.0,
-    
-    -.5,  0.0,  0.0,
-    -.5,  0.0,  1.0
-    };
-
-double cap1points[CYL_CAPNUMPOINTS][CYL_CAPNUMPOINTS * CYL_NUMCOORDS] = {
-    0.0, .5, 0.0,
-    CON3, CON4, 0.0,
-    CON4, CON3, 0.0,
-    .5, 0.0, 0.0,
-
-    -CON3, CON4, 0.0,
-    0.0, .5, 0.0,
-    .5, 0.0, 0.0,
-    CON4, -CON3, 0.0,
-
-    -CON4, CON3, 0.0,
-    -.5, 0.0, 0.0,
-    0.0, -.5, 0.0,
-    CON3, -CON4, 0.0,
-    
-    -.5, 0.0, 0.0,
-    -CON4, -CON3, 0.0,
-    -CON3, -CON4, 0.0,
-    0.0, -.5, 0.0
-    };
+#define CON1 1.775
+#define CON2 2.2
       
-double cap2points[CYL_CAPNUMPOINTS][CYL_CAPNUMPOINTS * CYL_NUMCOORDS] = {
-    0.0, .5, 1.0,
-    CON3, CON4, 1.0,
-    CON4, CON3, 1.0,
-    .5, 0.0, 1.0,
+      double ctlpoints[CYL_NUMPOINTSY][CYL_NUMPOINTSX * CYL_NUMCOORDS] = {
+	  -1.0,  0.0,  0.0,
+	  -1.0,  0.0,  1.0,
+	  
+	  -1.0,  CON1,  0.0,
+	  -1.0,  CON1,  1.0,
+	  
+	  CON2,  CON1,  0.0,
+	  CON2,  CON1,  1.0,
+	  
+	  CON2, -CON1,  0.0,
+	  CON2, -CON1,  1.0,
+	  
+	  -1.0, -CON1,  0.0,
+	  -1.0, -CON1,  1.0,
+	  
+	  -1.0,  0.0,  0.0,
+	  -1.0,  0.0,  1.0};
 
-    -CON3, CON4, 1.0,
-    0.0, .5, 1.0,
-    .5, 0.0, 1.0,
-    CON4, -CON3, 1.0,
-
-    -CON4, CON3, 1.0,
-    -.5, 0.0, 1.0,
-    0.0, -.5, 1.0,
-    CON3, -CON4, 1.0,
-    
-    -.5, 0.0, 1.0,
-    -CON4, -CON3, 1.0,
-    -CON3, -CON4, 1.0,
-    0.0, -.5, 1.0
-    };
-      
       ger_debug("gl_ren_mthd: def_cylinder");
-      
+
+#ifdef AVOID_NURBS
+    METHOD_RDY(ASSIST(self));
+    result= (*(ASSIST(self)->def_cylinder))();
+    METHOD_OUT
+    return( (P_Void_ptr)result );
+#else
       /*DON'T redefine things!*/
-      if (my_cylinder)
+      if (my_cylinder) {
+	  METHOD_OUT
 	  return((P_Void_ptr)my_cylinder);
+      }
       
       if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
 	  ger_fatal("def_cylinder: unable to allocate %d bytes!", sizeof(gl_gob));
@@ -386,6 +405,12 @@ double cap2points[CYL_CAPNUMPOINTS][CYL_CAPNUMPOINTS * CYL_NUMCOORDS] = {
       /*As of now, we're defining the object*/
       
       it->color_mode = LMC_AD;
+      
+      translate(0, 0, 1);
+      mycircle(1.0, TRUE);
+      translate(0, 0, -1);
+      mycircle(1.0, FALSE);
+
       bgnsurface();
       nurbssurface( 
 		   sizeof( surfknotsx) / sizeof( double ), surfknotsx, 
@@ -397,52 +422,76 @@ double cap2points[CYL_CAPNUMPOINTS][CYL_CAPNUMPOINTS * CYL_NUMCOORDS] = {
 		   N_V3D
 		   );
       endsurface();
-      bgnsurface();
-      nurbssurface( 
-		   sizeof( capknots) / sizeof( double ), capknots, 
-		   sizeof( capknots) / sizeof( double ), capknots, 
-		   sizeof(double) * CYL_NUMCOORDS, 
-		   sizeof(double) * CYL_CAPNUMPOINTS * CYL_NUMCOORDS, 
-		   (double *)cap1points, 
-		   CYL_CAPORDER, CYL_CAPORDER, 
-		   N_V3D
-		   );
-      endsurface();
-      bgnsurface();
-      nurbssurface( 
-		   sizeof( capknots) / sizeof( double ), capknots, 
-		   sizeof( capknots) / sizeof( double ), capknots, 
-		   sizeof(double) * CYL_NUMCOORDS, 
-		   sizeof(double) * CYL_CAPNUMPOINTS * CYL_NUMCOORDS, 
-		   (double *)cap2points, 
-		   CYL_CAPORDER, CYL_CAPORDER, 
-		   N_V3D
-		   );
-      endsurface();
-      
+
       closeobj();
 
       METHOD_OUT
       my_cylinder = it;
       return( (P_Void_ptr)it );
+#endif
   }
   METHOD_OUT
   return((P_Void_ptr)0);
 }
 
 static P_Void_ptr def_torus(char *name, double major, double minor) {
+#define rad .7071067811865 /*  square root of 2 all divided by 2  */
+    
+  typedef struct  {
+      double x, y, z, w;
+  }   Vector4d;
+
   P_Renderer *self= (P_Renderer *)po_this;
+  gl_gob *it;
   P_Void_ptr result;
   METHOD_IN
-
+  
+  double knots[12] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
+  double bx[9] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
+  double by[9] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
+  double  w[9] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
+  Vector4d cpts[81];    /* control points*/
+  int i, j, size_s;
+  
   if (RENDATA(self)->open) {
-    ger_debug("pnt_ren_mthd: def_torus");
+      ger_debug("gl_ren_mthd: def_torus");
+#ifdef AVOID_NURBS
+      METHOD_RDY(ASSIST(self));
+      result= (*(ASSIST(self)->def_torus))(major,minor);
+      
+      METHOD_OUT
+      return( (P_Void_ptr)result );
+#else
+      if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
+	  ger_fatal("def_cylinder: unable to allocate %d bytes!", sizeof(gl_gob));
+      
+      makeobj( it->obj=genobj() );
+      /*As of now, we're defining the object*/
+      
+      it->color_mode = LMC_AD;
 
-    METHOD_RDY(ASSIST(self));
-    result= (*(ASSIST(self)->def_torus))(major,minor);
+      size_s = 9;    
+      
+      for(j=0;j<size_s;j++)  {
+	  for(i=0;i<size_s;i++)  {
+	      cpts[i+j*size_s].x  =  (minor * bx[j] + major * w[j]) * bx[i];
+	      cpts[i+j*size_s].y  =  (minor * bx[j] + major * w[j]) * by[i];
+	      cpts[i+j*size_s].z  =   minor * w[i] * by[j];
+	      cpts[i+j*size_s].w  =   w[i] * w[j];
+	  }
+      }
+      
+      bgnsurface();
+      nurbssurface(12,knots,12,knots,
+		   sizeof(Vector4d), sizeof(Vector4d) * size_s,
+		   (double *)cpts, 3, 3, N_V3DR);
+      endsurface();      
 
-    METHOD_OUT
-    return( (P_Void_ptr)result );
+      closeobj();
+
+      METHOD_OUT
+      return((P_Void_ptr)it);
+#endif
   }
   METHOD_OUT
   return((P_Void_ptr)0);
@@ -491,23 +540,17 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 		top_level_call = 1;
 		lmcolor(LMC_COLOR);
 		back = BACKGROUND(self);
-		if ((back[0] == 0.0) && (back[1] == 0.0) && (back[2] == 0.0))
-		    czclear(0, gd_min);
-		else {
-		    c3f(back);
-		    clear();
-		    zclear();
-		}
+		GLPROF("Clearing");
+		czclear((back[0]*256)+((back[1]*255)*256)+((back[2]*255)*65536), gd_min);
 		pushmatrix();
 		lookat(LOOKFROM(self).x, LOOKFROM(self).y, LOOKFROM(self).z,
 		       LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z,
 		       LOOKANGLE(self));
 	    }
-
-
+	    GLPROF(thisgob->name);
 	    if ( thisgob->has_transform )
 		ren_transform(thisgob->trans);
-
+	    
 	    /* There must be children to render, because if this was a primitive
 	     * this method would not be getting executed.
 	     */
@@ -586,6 +629,10 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
 		/*And render it... ren methods for lights and ambients
 		  will fill in everything*/
 		pushmatrix();
+
+		if ( thisgob->has_transform )
+		    ren_transform(thisgob->trans);
+
 		ren_gob((P_Void_ptr)thisgob, (P_Transform *)0, (P_Attrib_List *)0);
 		popmatrix();
 		
@@ -627,13 +674,11 @@ static void get_rgb_color(P_Renderer *self, float col[4], float val) {
     (*MAP_FUN(self))( &val, &col[0], &col[1], &col[2], &col[3]);
 }
 
-static void def_polything(P_Vlist *vertices) {
+static void def_polything(P_Renderer *self, P_Vlist *vertices) {
     int lupe;
     float vtx[3];
     float col4[4], nor[3];
     color_mode_type color_mode;
-    P_Renderer *self = (P_Renderer *)po_this;
-    METHOD_IN
 
     ger_debug("gl_ren_mthd: def_polything\n");
 
@@ -736,7 +781,6 @@ static void def_polything(P_Vlist *vertices) {
 	break;
     } /*switch(vertices->type)*/
     
-    METHOD_OUT
 }
 
 static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
@@ -760,9 +804,10 @@ static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
     
     it->color_mode = LMC_COLOR;
     bgnline();
-    def_polything(vertices);
+    def_polything(self, vertices);
     endline();
     closeobj();
+    METHOD_OUT
     return((P_Void_ptr)it);
 }
 
@@ -787,9 +832,10 @@ static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
     
     it->color_mode = LMC_COLOR;
     bgnpolygon();
-    def_polything(vertices);
+    def_polything(self, vertices);
     endpolygon();
     closeobj();
+    METHOD_OUT
     return((P_Void_ptr)it);
 }
 
@@ -815,9 +861,10 @@ static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
     it->color_mode = LMC_COLOR;
 
     bgnline();
-    def_polything(vertices);
+    def_polything(self, vertices);
     endline();
     closeobj();
+    METHOD_OUT
     return((P_Void_ptr)it);
 }
 
@@ -843,9 +890,10 @@ static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
     it->color_mode = LMC_COLOR;
 
     bgntmesh();
-    def_polything(vertices);
+    def_polything(self, vertices);
     endtmesh();
     closeobj();
+    METHOD_OUT
     return((P_Void_ptr)it);
 }
 
@@ -860,6 +908,7 @@ static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
   int value_flag= 0;
   int value_flag_2= 0;
   P_Renderer *self= (P_Renderer *)po_this;
+  P_Void_ptr result;
   gl_gob *it;
     
   METHOD_IN
@@ -870,7 +919,14 @@ static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
   }
   
   ger_debug("gl_ren_mthd: def_bezier");
-  
+
+#ifdef AVOID_NURBS
+    METHOD_RDY(ASSIST(self));
+    result= (*(ASSIST(self)->def_bezier))(vertices);
+    METHOD_OUT
+    return( (P_Void_ptr)result );
+#else
+
   if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
       ger_fatal("def_bezier: unable to allocate %d bytes!", sizeof(gl_gob));
   
@@ -961,6 +1017,7 @@ static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
   METHOD_OUT
 	
   return((P_Void_ptr)it);
+#endif
 }
 
 static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
@@ -1273,9 +1330,11 @@ static void hold_gob(P_Void_ptr *gob) {
 	METHOD_OUT
 	return;
     }
-	
+
+    
     ger_debug("gl_ren_mthd: hold_gob\n");
 
+    METHOD_OUT
 }
 
 static void unhold_gob(P_Void_ptr *gob) {
@@ -1290,7 +1349,7 @@ static void unhold_gob(P_Void_ptr *gob) {
     }
 	
     ger_debug("gl_ren_mthd: unhold_gob\n");
-
+    METHOD_OUT
 }
 
 static P_Void_ptr def_camera(struct P_Camera_struct *thecamera) {
@@ -1586,7 +1645,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   size = NULL;
   
   if (datastr) {
-      where = (char *)malloc(strlen(datastr));
+      where = (char *)malloc(strlen(datastr)+1);
       strcpy(where, datastr);
       for (;*where != '\0';where++)
 	  switch (*where) {
@@ -1659,13 +1718,18 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   zbuffer(TRUE);
   lmcolor(LMC_COLOR);
   glcompat(GLC_ZRANGEMAP, 0);
+  glcompat(GLC_OLDPOLYGON, 1);
   lsetdepth(getgdesc(GD_ZMAX), getgdesc(GD_ZMIN));
   zfunction(ZF_GREATER);
+  shademodel(GOURAUD);
   gd_min = getgdesc(GD_ZMIN);
   if (hastransparent = getgdesc(GD_BLEND))
       blendfunction(BF_SA, BF_MSA);
   else
       defpattern(GREYPATTERN, 16, greyPattern);	  
+
+  sphmode(SPH_TESS, SPH_BILIN);
+  sphmode(SPH_DEPTH, 4);
   
   /*Predefine all of our materials...*/
   
