@@ -1,0 +1,32 @@
+include ${TOP}/conf/Makefile.${ARCH}
+include ${TOP}/depend.mk.${ARCH}
+
+O = ${TOP}/obj/${ARCH}
+L = ${TOP}/lib/${ARCH}
+B = ${TOP}/bin/${ARCH}
+
+SUBMAKES= 
+
+BUILD_EXES =
+BUILD_LIBS =
+
+CSOURCE= example_1.c example_2.c example_3.c example_4.c \
+	example_5.c example_6.c example_7.c example_8.c \
+	example_9.c example_10.c example_11.c example_12.c 
+
+CXXSOURCE= 
+
+FSOURCE= example_1.c example_2.c example_3.c example_4.c \
+	example_5.c example_6.c example_7.c example_8.c \
+	example_9.c example_10.c example_11.c example_12.c 
+
+HFILES= example_1.f example_2.f example_3.f example_4.f \
+	example_5.f example_6.f example_7.f example_8.f \
+	example_9.f example_10.f example_11.f example_12.f 
+
+DOCFILES= cyl_mthd.cc_ref.html drawp3d.html example_ref.html \
+	drawp3d_home.html drawp3d_redirect.html ftn_ref.html 
+
+MISCFILES= Makefile 
+
+include ${TOP}/rules.mk
