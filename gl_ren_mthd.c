@@ -57,6 +57,23 @@ This module provides renderer methods for the IRIS gl renderer
 #include "wiregl_papi.h"
 #endif
 
+#ifdef CHROMIUM
+#include "cr_applications.h"
+
+#define LOAD( x ) x##CR = (x##Proc) crGetProcAddress( #x )
+
+static const int MASTER_BARRIER = 100;
+
+crCreateContextProc crCreateContextCR;
+crMakeCurrentProc   crMakeCurrentCR;
+crSwapBuffersProc   crSwapBuffersCR;
+
+glBarrierCreateProc glBarrierCreateCR;
+glBarrierExecProc   glBarrierExecCR;
+
+int crContext;
+#endif
+
 #define GLPROF(x)
 
 #define BLACKPATTERN 0
@@ -81,6 +98,13 @@ static gl_material materials[N_MATERIALS]= {
 };
 
 #ifdef USE_OPENGL
+
+/* A struct to hold lighting info */
+typedef struct pgl_light_struct {
+  GLenum light_num;
+  GLfloat cvals[4];
+  GLfloat xvals[4];
+} PGL_Light;
 
 #define DEFAULT_WINDOW_GEOMETRY "300x300"
 
@@ -195,7 +219,7 @@ static void get_drawing_area( P_Renderer* self,
 			      unsigned int* width, unsigned int* height )
 {
   /* Assumes set_drawing_window has been called */
-#ifdef WIREGL
+#if defined(WIREGL) || defined(CHROMIUM)
   GLint params[4];
   glGetIntegerv(GL_VIEWPORT,params);
   *x_corner= params[0];
@@ -233,14 +257,14 @@ static void get_drawing_area( P_Renderer* self,
 static void set_drawing_window( P_Renderer* self )
 {
 #ifdef USE_OPENGL
-
-#ifdef WIREGL
+#if defined(WIREGL)
   wireGLMakeCurrent();
+#elif defined(CHROMIUM)
+  crMakeCurrentCR(0, crContext);
 #else
   if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) != True)
      ger_error("Error: set_drawing_window: unable to set context!\n");
 #endif
-
 #else
   if (!AUTO (self)) {
     winset(WINDOW(self));
@@ -261,16 +285,34 @@ static void attach_drawing_window( P_Renderer* self )
   /* AUTO(self) is always true in here */
 
 #ifdef USE_OPENGL
-
-#ifdef WIREGL
-
+#if defined(WIREGL)
   XWINDOW(self)= 0;
-
+  wireGLSetRank( RANK(self) );
   wireGLCreateContext();
   GLXCONTEXT(self)= NULL;
   wireGLMakeCurrent();
   if (NPROCS(self)>0) glBarrierCreate(BARRIER(self), NPROCS(self));
-    
+#elif defined(CHROMIUM)
+  XWINDOW(self)= 0;
+  crSetRank( RANK(self) );
+
+  LOAD( crCreateContext );
+  LOAD( crMakeCurrent );
+  LOAD( crSwapBuffers );
+
+  crContext = crCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
+  if (crContext <= 0) {
+    crError("crCreateContextCR() call failed!\n");
+    return;
+  }
+  crMakeCurrentCR(0, crContext);
+  
+  LOAD( glBarrierCreate );
+  LOAD( glBarrierExec );
+  
+  if (NPROCS(self)>0) glBarrierCreateCR(MASTER_BARRIER, NPROCS(self));
+  
+  GLXCONTEXT(self)= NULL;
 #else
 
   XVisualInfo *vi;
@@ -343,16 +385,34 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
 {
   /* AUTO(self) is always false in here */
 #ifdef USE_OPENGL
-
-#ifdef WIREGL
-  
+#if defined(WIREGL)
   XWINDOW(self)= 0;
-
+  wireGLSetRank( RANK(self) );
   wireGLCreateContext();
   wireGLMakeCurrent();
   GLXCONTEXT(self)= NULL;
   if (NPROCS(self)>0) glBarrierCreate(BARRIER(self), NPROCS(self));
+#elif defined(CHROMIUM)
+  XWINDOW(self)= 0;
+  crSetRank( RANK(self) );
 
+  LOAD( crCreateContext );
+  LOAD( crMakeCurrent );
+  LOAD( crSwapBuffers );
+
+  crContext = crCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
+  if (crContext <= 0) {
+    crError("crCreateContextCR() call failed!\n");
+    return;
+  }
+  crMakeCurrentCR( 0, crContext );
+  
+  LOAD( glBarrierCreate );
+  LOAD( glBarrierExec );
+  
+  if (NPROCS(self)>0) glBarrierCreateCR(MASTER_BARRIER, NPROCS(self));
+  
+  GLXCONTEXT(self)= NULL;
 #else
   {
     Display *dpy;
@@ -443,12 +503,10 @@ static void release_drawing_window( P_Renderer* self )
 {
   /* Destroys the window if appropriate */
 #ifdef USE_OPENGL
-
 #ifndef WIREGL
   glXDestroyContext(XDISPLAY(self),GLXCONTEXT(self));
   XDestroyWindow(XDISPLAY(self),XWINDOW(self));
 #endif
-
 #else
   if (AUTO(self)) {
     /* Doesn't seem to be anything to do, since the caller owns the widget */
@@ -2035,7 +2093,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 	top_level_call = 1;
 
 #ifdef USE_OPENGL
-#ifndef WIREGL
+#if !defined(WIREGL) && !defined(CHROMIUM)
 	if (MANAGE(self) && !AUTO(self)) {
 	  /* We have to run a little event loop, because no one else is. */
 	  int event_pending= 1;
@@ -2071,8 +2129,10 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 		       BACKGROUND(self)[2], BACKGROUND(self)[3]);
 	  glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 	}
-#ifdef WIREGL
+#if defined(WIREGL)
 	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
+#elif defined(CHROMIUM)
+	if (NPROCS(self)>0) glBarrierExecCR(BARRIER(self));
 #endif
 	GLPROF("BuildingCoordTrans")
 	glPushMatrix();
@@ -2135,9 +2195,23 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 #ifdef USE_OPENGL
 	glPopMatrix();
 
-#ifdef WIREGL
+#if defined(WIREGL)
 	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
-	if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0)) wireGLSwapBuffers();
+
+	if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0))
+	  wireGLSwapBuffers();
+#ifdef WIREGL_INSTRUMENT
+	else if (MANAGE(self) && (NPROCS(self)!=0 || RANK(self)!=0))
+	  wireGLInstrumentNextFrame();
+#endif
+
+#elif defined(CHROMIUM)
+	if (NPROCS(self)>0) glBarrierExecCR( MASTER_BARRIER );
+
+	/* The crserver only executes the SwapBuffers() for the 0th client.
+	 * No need to test for rank==0 as we used to do.
+	 */
+	if (MANAGE(self)) crSwapBuffersCR(0, 0);
 #else
 	if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
 #endif
@@ -2864,6 +2938,22 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     return( (P_Void_ptr)it );
 }
 
+#ifdef USE_OPENGL
+static int pick_free_light(P_Renderer* self)
+{
+  int i;
+  for (i=0; i<MY_GL_MAX_LIGHTS; i++) {
+    if (!LIGHT_IN_USE(self)[i]) {
+      LIGHT_IN_USE(self)[i]++;
+      return i;
+    }
+  }
+  ger_error("gl_ren_mthd: ran out of lights!\n");
+  LIGHT_IN_USE(self)[MY_GL_MAX_LIGHTS-1]++;
+  return MY_GL_MAX_LIGHTS-1;
+}
+#endif
+
 static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
     
     P_Renderer *self = (P_Renderer *)po_this;
@@ -2879,34 +2969,23 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
     
 #ifdef USE_OPENGL
     {
-      GLfloat cvals[4];
-      GLfloat xvals[4];
-      GLuint lightlist;
-      cvals[0]= color->r;
-      cvals[1]= color->g;
-      cvals[2]= color->b;
-      cvals[3]= color->a;
-      xvals[0]= point->x;
-      xvals[1]= point->y;
-      xvals[2]= point->z;
-      xvals[3]= 0.0;
+      PGL_Light* light= NULL;
 
-      if (MANAGE(self)) set_drawing_window(self);
-      glNewList( lightlist=glGenLists(1) , GL_COMPILE );
-      glLightfv( LIGHT_NUM(self), GL_DIFFUSE, cvals );
-      glLightfv( LIGHT_NUM(self), GL_SPECULAR, cvals );
-      glLightfv( LIGHT_NUM(self), GL_POSITION, xvals );
-      glEnable( LIGHT_NUM(self) );
-      glEndList();
-      /* Increment light number, wrapping if necessary */
-      LIGHT_NUM(self) = LIGHT_NUM(self) + 1;
-      if (LIGHT_NUM(self) >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) {
-	ger_error("gl_ren_mthd: Warning, recycling light numbers!\n");
-	LIGHT_NUM(self)= GL_LIGHT0;
-      }
+      if (!(light=(PGL_Light*)malloc(sizeof(PGL_Light))))
+	ger_fatal("def_light: unable to allocate %d bytes!\n",
+		  sizeof(PGL_Light));
+      light->cvals[0]= color->r;
+      light->cvals[1]= color->g;
+      light->cvals[2]= color->b;
+      light->cvals[3]= color->a;
+      light->xvals[0]= point->x;
+      light->xvals[1]= point->y;
+      light->xvals[2]= point->z;
+      light->xvals[3]= 0.0;
+      light->light_num= pick_free_light(self);
 
       METHOD_OUT
-      return((P_Void_ptr)lightlist);
+      return((P_Void_ptr)light);
     }
 #else
     {
@@ -2949,8 +3028,18 @@ void traverse_light(P_Void_ptr it, P_Transform *foo,
     ger_debug("gl_ren_mthd: traverse_light");
     
 #ifdef USE_OPENGL
-    /* Turn on the given light */
-    glCallList((GLuint)it);
+
+    {
+      PGL_Light* light= (PGL_Light*)it;
+      
+      glLightfv( GL_LIGHT0 + light->light_num, GL_DIFFUSE, light->cvals );
+      glLightfv( GL_LIGHT0 + light->light_num, GL_SPECULAR, light->cvals );
+      glLightfv( GL_LIGHT0 + light->light_num, GL_POSITION, light->xvals );
+      glEnable( GL_LIGHT0 + light->light_num );
+      fprintf(stderr,"Traverse light %d on %s\n",light->light_num,
+	      self->name);
+    }
+
 #else
     /*Okay... let's figure out how many lights are in use...
      and quit if we have too many...*/
@@ -2981,7 +3070,12 @@ void destroy_light(P_Void_ptr it) {
     ger_debug("gl_ren_mthd: destroy_light\n");
 
 #ifdef USE_OPENGL
-    glDeleteLists((GLuint)it,1);
+    {
+      PGL_Light* light= (PGL_Light*)it;
+      if ((--LIGHT_IN_USE(self)[light->light_num])==0)
+	glDisable( GL_LIGHT0 + light->light_num );
+      free(light);
+    }
 #else
     /*Hmm... Maybe if we do resource allocation one of these days there'll
       actually be something to do here...*/
@@ -3003,28 +3097,21 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
 
 #ifdef USE_OPENGL
     {
-      GLfloat cvals[4];
-      GLuint lightlist;
-      cvals[0]= color->r;
-      cvals[1]= color->g;
-      cvals[2]= color->b;
-      cvals[3]= color->a;
+      PGL_Light *light= NULL;
 
-      if (MANAGE(self)) set_drawing_window(self);
-      glNewList( lightlist=glGenLists(1) , GL_COMPILE );
-      glLightfv( LIGHT_NUM(self), GL_AMBIENT, cvals );
-      glEnable( LIGHT_NUM(self) );
-      glEndList();
-
-      /* Increment light number, wrapping if necessary */
-      LIGHT_NUM(self)= LIGHT_NUM(self) + 1;
-      if (LIGHT_NUM(self) >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) {
-	ger_error("gl_ren_mthd: Warning, recycling light numbers!\n");
-	LIGHT_NUM(self)= GL_LIGHT0;
-      }
+      if (!(light=(PGL_Light*)malloc(sizeof(PGL_Light))))
+	ger_fatal("def_light: unable to allocate %d bytes!\n",
+		  sizeof(PGL_Light));
+      light->cvals[0]= color->r;
+      light->cvals[1]= color->g;
+      light->cvals[2]= color->b;
+      light->cvals[3]= color->a;
+      light->xvals[0]= light->xvals[1]= light->xvals[2]=
+	light->xvals[3]= 0.0;
+      light->light_num= pick_free_light(self);
 
       METHOD_OUT
-      return((P_Void_ptr)lightlist);
+      return((P_Void_ptr)light);
     }
 
 #else
@@ -3051,9 +3138,12 @@ void traverse_ambient(P_Void_ptr it, P_Transform *foo,
     ger_debug("gl_ren_mthd: ren_ambient");
 
 #ifdef USE_OPENGL
-
-    /* Turn on the given light */
-    glCallList((GLuint)it);
+    {
+      PGL_Light* light= (PGL_Light*)it;
+      
+      glLightfv( GL_LIGHT0 + light->light_num, GL_AMBIENT, light->cvals );
+      glEnable( GL_LIGHT0 + light->light_num );
+    }
 
 #else
     /*Ambient lighting sums... at least, the painter renderer seems
@@ -3090,7 +3180,12 @@ void destroy_ambient(P_Void_ptr it) {
     ger_debug("gl_ren_mthd: destroy_ambient\n");
 
 #ifdef USE_OPENGL
-    glDeleteLists((GLuint)it,1);
+    {
+      PGL_Light* light= (PGL_Light*)it;
+      if ((--LIGHT_IN_USE(self)[light->light_num])==0)
+	glDisable( GL_LIGHT0 + light->light_num );
+      free(light);
+    }
 #else
     /* nothing to be done */
 #endif
@@ -3355,7 +3450,7 @@ static void ren_destroy() {
     free( (P_Void_ptr)AMBIENTCOLOR(self) );
 #ifndef USE_OPENGL
     free( (P_Void_ptr)LM(self) );
-#ifdef WIREGL
+#if defined(WIREGL)
     if (NPROCS(self)>0) glBarrierDestroy(BARRIER(self));
 #endif
 #endif
@@ -3581,7 +3676,8 @@ void init_gl_structure (P_Renderer *self)
      SPHERE_DEFINED(self)= 0;
      CYLINDER(self)= NULL;
      CYLINDER_DEFINED(self)= 0;
-     LIGHT_NUM(self)= GL_LIGHT0;
+     for (lupe=0; lupe<MY_GL_MAX_LIGHTS; lupe++)
+       LIGHT_IN_USE(self)[lupe]= 0;
      if (NPROCS(self)>0) {
        BARRIER(self)= ren_seq_num;
      }
@@ -3688,13 +3784,21 @@ void init_gl_gl (P_Renderer *self)
      int xcorner, ycorner;
 
 #ifdef USE_OPENGL
-
      glMatrixMode(GL_MODELVIEW);
 
      glClearColor(0.0,0.0,0.0,0.0); 
 
-#ifdef WIREGL
-     if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0)) wireGLSwapBuffers();
+#if defined(WIREGL)
+	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
+
+	if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0))
+	  wireGLSwapBuffers();
+#ifdef WIREGL_INSTRUMENT
+	else if (MANAGE(self) && (NPROCS(self)!=0 || RANK(self)!=0))
+	  wireGLInstrumentNextFrame();
+#endif
+#elif defined(CHROMIUM)
+     if (MANAGE(self)) crSwapBuffersCR(0, 0);
 #else
      if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
 #endif
