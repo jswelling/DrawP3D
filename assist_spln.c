@@ -259,7 +259,7 @@ static P_Void_ptr def_bezier( P_Vlist *knotlist )
     t += tstep;
   }
   
-  /* Generate the mesh from the torus data and draw it */
+  /* Generate the mesh from the data and draw it */
   result= build_mesh( RENDERER(self), knotlist->type, bezier_vertices, coords,
 	     bezier_facets, vertex_counts, (int *)bezier_connect );
 

@@ -194,7 +194,7 @@ set incl_cr = 0
 foreach dirname ( /include /usr/include /usr/local/include \
     /usr/local/cr /usr/statlocal/include /usr/statlocal/cr \
     /usr/freeware/include /usr/freeware/cr ${HOME}/cr/include \
-    ${HOME}/include )
+    ${HOME}/cr/cr/include ${HOME}/include )
   if ( -e ${dirname}/chromium.h ) then
     set incl_cr = 1
     break
@@ -285,3 +285,4 @@ endif
 # Check for Painter?
 # Make tori a little smarter about ren type
 # Why the strange lighting in GL?
+# assist in gl_ren_mthd fails for tri stripping?
