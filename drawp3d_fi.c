@@ -84,15 +84,6 @@ assignment less ambiguous.
 #define MAXSTRING 128
 
 /* Set up interface to Fortran character string descriptors */
-#define STRINGLENGTH /* nothing */
-#define DEFSTRINGLENGTH /* nothing */
-#define STRINGLENGTH2 /* nothing */
-#define DEFSTRINGLENGTH2 /* nothing */
-#define STRINGLENGTH3 /* nothing */
-#define DEFSTRINGLENGTH3 /* nothing */
-#define STRINGLENGTH4 /* nothing */
-#define DEFSTRINGLENGTH4 /* nothing */
-
 #ifdef VMS
 typedef struct dsc$descriptor_s *string_descriptor;
 #endif
@@ -135,6 +126,19 @@ typedef char *string_descriptor;
 #define STRINGLENGTH4 ,stringlength4
 #define DEFSTRINGLENGTH4 int stringlength4;
 #endif
+
+/* Default definitions */
+#ifndef STRINGLENGTH
+#define STRINGLENGTH /* nothing */
+#define DEFSTRINGLENGTH /* nothing */
+#define STRINGLENGTH2 /* nothing */
+#define DEFSTRINGLENGTH2 /* nothing */
+#define STRINGLENGTH3 /* nothing */
+#define DEFSTRINGLENGTH3 /* nothing */
+#define STRINGLENGTH4 /* nothing */
+#define DEFSTRINGLENGTH4 /* nothing */
+#endif
+
 
 static char *getstring(strdesc STRINGLENGTH)
 string_descriptor strdesc;
