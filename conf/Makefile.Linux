@@ -1,0 +1,7 @@
+AR= ar ru
+RANLIB= echo fake-ranlib
+MACHINE_DEFS= unix_defs.h
+XLIBS = -L/usr/X11R6/lib -lXm -lXt -lXmu -lX11
+GLLIBS = -lGLU -lGL
+CFLAGS += -DINTEL_LINUX -I/usr/X11R6/include -g
+
