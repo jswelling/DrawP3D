@@ -1220,7 +1220,7 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
 }
 
 void ren_light(P_Void_ptr it, P_Transform *foo,
-			      P_Transform *bar) {
+			      P_Attrib_List *bar) {
 
     P_Renderer *self = (P_Renderer *)po_this;
     short the_light = (short)it;
@@ -1279,7 +1279,7 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
 }
 
 void ren_ambient(P_Void_ptr it, P_Transform *foo,
-			      P_Transform *bar) {
+			      P_Attrib_List *bar) {
 
     P_Color *color = (P_Color *)it;
     P_Renderer *self = (P_Renderer *)po_this;
@@ -1320,7 +1320,7 @@ void destroy_ambient(P_Void_ptr it) {
     METHOD_OUT
 }
 
-static void hold_gob(P_Void_ptr *gob) {
+static void hold_gob(P_Void_ptr gob) {
     /*This doesn't do anything*/
 
     P_Renderer *self = (P_Renderer *)po_this;
@@ -1337,7 +1337,7 @@ static void hold_gob(P_Void_ptr *gob) {
     METHOD_OUT
 }
 
-static void unhold_gob(P_Void_ptr *gob) {
+static void unhold_gob(P_Void_ptr gob) {
     /*This doesn't do anything*/
 
     P_Renderer *self = (P_Renderer *)po_this;
@@ -1431,7 +1431,7 @@ static void set_camera(P_Void_ptr thecamera) {
     METHOD_OUT
 }    
     
-static void destroy_camera(P_Void_ptr *thecamera) {
+static void destroy_camera(P_Void_ptr thecamera) {
 
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
