@@ -156,31 +156,31 @@ static GLfloat  w[9] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
 #else
 static unsigned short greyPattern[16] =
 {
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA,
-    0x5555,
-    0xAAAA
-    };
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA,
+  0x5555,
+  0xAAAA
+};
 
 static short light_num = 3;
 
 static float initiallm[]={
-    AMBIENT, .6, .6, .6,
-    LOCALVIEWER, 0.0,
-    TWOSIDE, 0.0,
-    LMNULL};    
+  AMBIENT, .6, .6, .6,
+  LOCALVIEWER, 0.0,
+  TWOSIDE, 0.0,
+  LMNULL};    
 
 /* Used in defining tori */
 #define rad .7071067811865 /*  square root of 2 all divided by 2  */
@@ -263,7 +263,7 @@ static void set_drawing_window( P_Renderer* self )
   crMakeCurrentCR(0, crContext);
 #else
   if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) != True)
-     ger_error("Error: set_drawing_window: unable to set context!\n");
+    ger_error("Error: set_drawing_window: unable to set context!\n");
 #endif
 #else
   if (!AUTO (self)) {
@@ -467,7 +467,7 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
   }
 #endif
 
-    /* OK, the window should be up. */
+  /* OK, the window should be up. */
 #else
   {
     int result; 
@@ -611,17 +611,17 @@ static void update_materials(P_Renderer *self, int mat_index)
 }
 
 static void get_rgb_color(P_Renderer *self, float* col, float val) {
-    /*Return the RGB value from the colormap.*/
+  /*Return the RGB value from the colormap.*/
 
-    /* Scale, clip, and map. */
-    val= ( val-MAP_MIN(self) )/( MAP_MAX(self)-MAP_MIN(self) );
-    if ( val > 1.0 ) val= 1.0;
-    if ( val < 0.0 ) val= 0.0;
-    (*MAP_FUN(self))( &val, &col[0], &col[1], &col[2], &col[3]);
+  /* Scale, clip, and map. */
+  val= ( val-MAP_MIN(self) )/( MAP_MAX(self)-MAP_MIN(self) );
+  if ( val > 1.0 ) val= 1.0;
+  if ( val < 0.0 ) val= 0.0;
+  (*MAP_FUN(self))( &val, &col[0], &col[1], &col[2], &col[3]);
 }
 
 static P_Cached_Vlist* cache_vlist( P_Renderer *self, P_Vlist *vlist )
-/* This routine outputs a vertex list */
+     /* This routine outputs a vertex list */
 {
   int i;
   P_Cached_Vlist* result;
@@ -635,7 +635,7 @@ static P_Cached_Vlist* cache_vlist( P_Renderer *self, P_Vlist *vlist )
   }
 
   METHOD_RDY(vlist)
-  result->length= vlist->length;
+    result->length= vlist->length;
 
   if ((vlist->type != P3D_CVTX)
       && (vlist->type != P3D_CCVTX)
@@ -811,17 +811,17 @@ static void send_cached_vlist( P_Cached_Vlist* cvlist )
 
 static void destroy_object(P_Void_ptr the_thing) {
     
-    gl_gob *it = (gl_gob *)the_thing;
-    P_Renderer *self = (P_Renderer *)po_this;
+  gl_gob *it = (gl_gob *)the_thing;
+  P_Renderer *self = (P_Renderer *)po_this;
 
-    METHOD_IN
+  METHOD_IN
 
     ger_debug("gl_ren_mthd: destroy_object\n");
 
-    if (it) {
+  if (it) {
 #ifdef USE_OPENGL
-      if (it->obj_info.obj && glIsList(it->obj_info.obj)) {
-	glDeleteLists( it->obj_info.obj, 1);
+    if (it->obj_info.obj && glIsList(it->obj_info.obj)) {
+      glDeleteLists( it->obj_info.obj, 1);
 #else
       if (it->obj_info.obj && isobj(it->obj_info.obj)) {
 	delobj(it->obj_info.obj);	
@@ -831,16 +831,16 @@ static void destroy_object(P_Void_ptr the_thing) {
       free((void *)it);
     }
     METHOD_OUT
-}
+      }
 
-static void destroy_mesh(P_Void_ptr the_thing) {
+  static void destroy_mesh(P_Void_ptr the_thing) {
     
     gl_gob *it = (gl_gob *)the_thing;
     P_Renderer *self = (P_Renderer *)po_this;
 
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: destroy_mesh\n");
+      ger_debug("gl_ren_mthd: destroy_mesh\n");
 
 #ifdef USE_GL_OBJ
     destroy_obj(the_thing);
@@ -854,9 +854,9 @@ static void destroy_mesh(P_Void_ptr the_thing) {
 #endif
 
     METHOD_OUT
-}
+      }
 
-static void destroy_sphere(P_Void_ptr the_thing) {
+  static void destroy_sphere(P_Void_ptr the_thing) {
     /*Destroy a sphere.*/
     
     gl_gob *it = (gl_gob *)the_thing;
@@ -864,16 +864,16 @@ static void destroy_sphere(P_Void_ptr the_thing) {
 
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: destroy_sphere\n");
+      ger_debug("gl_ren_mthd: destroy_sphere\n");
 
 #ifdef USE_OPENGL
     if (it == SPHERE(self)) {
-	METHOD_OUT
+      METHOD_OUT
 	return;
     }
 #else
     if (it == my_sphere) {
-	METHOD_OUT
+      METHOD_OUT
 	return;
     }
 #endif
@@ -894,9 +894,9 @@ static void destroy_sphere(P_Void_ptr the_thing) {
     }
 #endif
     METHOD_OUT
-}
+      }
 
-static void destroy_cylinder(P_Void_ptr the_thing) {
+  static void destroy_cylinder(P_Void_ptr the_thing) {
     /*Destroys a cylinder.*/
     
     gl_gob *it = (gl_gob *)the_thing;
@@ -904,16 +904,16 @@ static void destroy_cylinder(P_Void_ptr the_thing) {
 
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: destroy_cylinder\n");
+      ger_debug("gl_ren_mthd: destroy_cylinder\n");
 
 #ifdef USE_OPENGL
     if (it == CYLINDER(self)) {
-	METHOD_OUT
+      METHOD_OUT
 	return;
     }
 #else
     if (it == my_cylinder) {
-	METHOD_OUT
+      METHOD_OUT
 	return;
     }
 #endif
@@ -936,16 +936,16 @@ static void destroy_cylinder(P_Void_ptr the_thing) {
 #endif
 
     METHOD_OUT
-}
+      }
 
-static void destroy_torus(P_Void_ptr the_thing) {
+  static void destroy_torus(P_Void_ptr the_thing) {
     
     gl_gob *it = (gl_gob *)the_thing;
     P_Renderer *self = (P_Renderer *)po_this;
 
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: destroy_torus\n");
+      ger_debug("gl_ren_mthd: destroy_torus\n");
 
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
@@ -966,16 +966,16 @@ static void destroy_torus(P_Void_ptr the_thing) {
 #endif
 
     METHOD_OUT
-}
+      }
 
-static void destroy_bezier(P_Void_ptr the_thing) {
+  static void destroy_bezier(P_Void_ptr the_thing) {
     
     gl_gob *it = (gl_gob *)the_thing;
     P_Renderer *self = (P_Renderer *)po_this;
 
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: destroy_bezier\n");
+      ger_debug("gl_ren_mthd: destroy_bezier\n");
 
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
@@ -998,23 +998,23 @@ static void destroy_bezier(P_Void_ptr the_thing) {
 #endif
 
     METHOD_OUT
-}
+      }
 
-static void ren_transform(P_Transform trans) {
+  static void ren_transform(P_Transform trans) {
 #ifdef USE_OPENGL
-  int i,j;
-  GLfloat theMatrix[16];
-  float* runner1= theMatrix;
-  float* runner2;
-  for (i=0; i<4; i++) {
-    runner1= theMatrix + i;
-    runner2= trans.d + 4*i;
-    for (j=0; j<4; j++) {
-      *runner1= *runner2++;
-      runner1 += 4;
+    int i,j;
+    GLfloat theMatrix[16];
+    float* runner1= theMatrix;
+    float* runner2;
+    for (i=0; i<4; i++) {
+      runner1= theMatrix + i;
+      runner2= trans.d + 4*i;
+      for (j=0; j<4; j++) {
+	*runner1= *runner2++;
+	runner1 += 4;
+      }
     }
-  }
-  glMultMatrixf(theMatrix);
+    glMultMatrixf(theMatrix);
 #else
     Matrix theMatrix;
     int lupe;
@@ -1022,21 +1022,21 @@ static void ren_transform(P_Transform trans) {
     int loope;
     
     for (lupe=lup=0;lupe<16;lupe+=4, lup++)
-	for (loope=0;loope<4;loope++)
-	    theMatrix[loope][lup]=trans.d[lupe+loope];
+      for (loope=0;loope<4;loope++)
+	theMatrix[loope][lup]=trans.d[lupe+loope];
     multmatrix(theMatrix);
 #endif
-}
+  }
 
-static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
+  static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
+			 P_Attrib_List *attrs) {
     
     /*P_Transform is an struct which contains float d[16];*/
     /*P_Attrib is a struct of
-        P_Symbol attribute; where P_Symbol is just a P_Void_ptr
-        int type; where type is te value type
-        P_Void_ptr value;
-        and two structs for the next and prev things in the list.
+      P_Symbol attribute; where P_Symbol is just a P_Void_ptr
+      int type; where type is te value type
+      P_Void_ptr value;
+      and two structs for the next and prev things in the list.
     */
 
     P_Renderer *self = (P_Renderer *)po_this;
@@ -1045,165 +1045,165 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
     P_Material *mat;
     METHOD_IN
 	
-    gl_gob *it = (gl_gob *)the_thing;
+      gl_gob *it = (gl_gob *)the_thing;
     
     if (RENDATA(self)->open) {
-	ger_debug("gl_ren_mthd: ren_object");
-	if (!it) {
-	    ger_error("gl_ren_mthd: ren_object: null object data found.");
-	    METHOD_OUT
-	    return;
-	}
-
-	/*get the attributes*/
-	METHOD_RDY(ASSIST(self));
-	pcolor= (*(ASSIST(self)->color_attribute))(COLORSYMBOL(self));
-#ifdef  USE_OPENGL
-	if ( ((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) )
-	  glEnable(GL_CULL_FACE);
-	else glDisable(GL_CULL_FACE);
-#else
-	backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
-#endif
-	mat= (*(ASSIST(self)->material_attribute))(MATERIALSYMBOL(self));
-	
-	/*prepare attributes*/
-	/*we've already defined all of our materials at open time... :)*/
-	/*Note: there is a significant performance penalty for frequently
-	  changing the current material via lmbind...*/
-
-	if (CURMATERIAL(self) != mat->type)
-	  update_materials(self, mat->type);
-
-	/*Set color mode...*/
-#ifdef USE_OPENGL
-	if (it->color_mode) {
-	  glEnable(GL_LIGHTING);
-	}
-	else {
-	  glDisable(GL_LIGHTING);
-	}
-
-#else
-	lmcolor(it->color_mode); /*Some like it AD, some like it COLOR...*/
-#endif
-
-	/* What we're doing in the above call is distinguishing between the
-	 * case in which we're updating the COLOR of an object and the case
-	 * in which we're updating the color of the MATERIAL of the object.
-	 * 
-	 * This is a Really Important Distinction. Things with inherent color
-	 * attributes are updating their COLOR at various spots, while things
-	 * without color attributes, i.e. surfaces of vertices and normals,
-	 * must update their materials.
-	 *
-	 * I guess this'd be easier if we didn't implement materials, but...
-	 */
-	
-
-	/*Set color...*/
-	rgbify_color(pcolor);
-
-	color[0]= pcolor->r;
-	color[1]= pcolor->g;
-	color[2]= pcolor->b;
-	color[3]= pcolor->a;
-#ifdef USE_OPENGL
-	glColor4fv(color);
-#else
-	c4f(color);
-#endif
-
-	if ((! hastransparent) && (color[3] < .5)) {
-	  screen_door_transp(1);
-	}
-
-	/*we should almost never need this segment, but then again,
-	  we might... */
-	if (transform) {
-#ifdef USE_OPENGL
-	  glPushMatrix();
-#else
-	    pushmatrix();
-#endif
-	    ren_transform(*transform);
-	}
-	
-	/*and render*/
-#ifdef USE_OPENGL
-	if (MANAGE(self)) set_drawing_window(self);
-	if (it->obj_info.obj) glCallList(it->obj_info.obj);
-#else
-	if (it->obj_info.obj) callobj(it->obj_info.obj);
-#endif
-	else ger_error("gl_ren_mthd: ren_object: null gl object found!");
-	/*And restore*/
-	if (transform)
-#ifdef USE_OPENGL
-	  glPopMatrix();
-#else
-	  popmatrix();
-#endif
-
-	if ((! hastransparent) && (color[3] < .5)) {
-	  screen_door_transp(0);
-	}
-
-	/*Gee, wasn't that easy? :)  */
+      ger_debug("gl_ren_mthd: ren_object");
+      if (!it) {
+	ger_error("gl_ren_mthd: ren_object: null object data found.");
 	METHOD_OUT
-     }
-}
+	  return;
+      }
 
-static int ren_prim_setup( P_Renderer* self, gl_gob* it, 
-			   P_Transform* trans, P_Attrib_List* attrs )
-{
-  /* P_Transform is an struct which contains float d[16];*/
-  /* P_Attrib is a struct of
+      /*get the attributes*/
+      METHOD_RDY(ASSIST(self));
+      pcolor= (*(ASSIST(self)->color_attribute))(COLORSYMBOL(self));
+#ifdef  USE_OPENGL
+      if ( ((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) )
+	glEnable(GL_CULL_FACE);
+      else glDisable(GL_CULL_FACE);
+#else
+      backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
+#endif
+      mat= (*(ASSIST(self)->material_attribute))(MATERIALSYMBOL(self));
+	
+      /*prepare attributes*/
+      /*we've already defined all of our materials at open time... :)*/
+      /*Note: there is a significant performance penalty for frequently
+	changing the current material via lmbind...*/
+
+      if (CURMATERIAL(self) != mat->type)
+	update_materials(self, mat->type);
+
+      /*Set color mode...*/
+#ifdef USE_OPENGL
+      if (it->color_mode) {
+	glEnable(GL_LIGHTING);
+      }
+      else {
+	glDisable(GL_LIGHTING);
+      }
+
+#else
+      lmcolor(it->color_mode); /*Some like it AD, some like it COLOR...*/
+#endif
+
+      /* What we're doing in the above call is distinguishing between the
+       * case in which we're updating the COLOR of an object and the case
+       * in which we're updating the color of the MATERIAL of the object.
+       * 
+       * This is a Really Important Distinction. Things with inherent color
+       * attributes are updating their COLOR at various spots, while things
+       * without color attributes, i.e. surfaces of vertices and normals,
+       * must update their materials.
+       *
+       * I guess this'd be easier if we didn't implement materials, but...
+       */
+	
+
+      /*Set color...*/
+      rgbify_color(pcolor);
+
+      color[0]= pcolor->r;
+      color[1]= pcolor->g;
+      color[2]= pcolor->b;
+      color[3]= pcolor->a;
+#ifdef USE_OPENGL
+      glColor4fv(color);
+#else
+      c4f(color);
+#endif
+
+      if ((! hastransparent) && (color[3] < .5)) {
+	screen_door_transp(1);
+      }
+
+      /*we should almost never need this segment, but then again,
+	we might... */
+      if (transform) {
+#ifdef USE_OPENGL
+	glPushMatrix();
+#else
+	pushmatrix();
+#endif
+	ren_transform(*transform);
+      }
+	
+      /*and render*/
+#ifdef USE_OPENGL
+      if (MANAGE(self)) set_drawing_window(self);
+      if (it->obj_info.obj) glCallList(it->obj_info.obj);
+#else
+      if (it->obj_info.obj) callobj(it->obj_info.obj);
+#endif
+      else ger_error("gl_ren_mthd: ren_object: null gl object found!");
+      /*And restore*/
+      if (transform)
+#ifdef USE_OPENGL
+	glPopMatrix();
+#else
+      popmatrix();
+#endif
+
+      if ((! hastransparent) && (color[3] < .5)) {
+	screen_door_transp(0);
+      }
+
+      /*Gee, wasn't that easy? :)  */
+      METHOD_OUT
+	}
+  }
+
+  static int ren_prim_setup( P_Renderer* self, gl_gob* it, 
+			     P_Transform* trans, P_Attrib_List* attrs )
+    {
+      /* P_Transform is an struct which contains float d[16];*/
+      /* P_Attrib is a struct of
    * P_Symbol attribute; where P_Symbol is just a P_Void_ptr
    * int type; where type is te value type
    * P_Void_ptr value;
    * and two structs for the next and prev things in the list.
    */
-  P_Color *pcolor;
-  float color[4];
-  P_Material *mat;
-  int screendoor_set= 0;
+      P_Color *pcolor;
+      float color[4];
+      P_Material *mat;
+      int screendoor_set= 0;
 
   /*get the attributes*/
-  METHOD_RDY(ASSIST(self));
-  pcolor= (*(ASSIST(self)->color_attribute))(COLORSYMBOL(self));
+      METHOD_RDY(ASSIST(self));
+      pcolor= (*(ASSIST(self)->color_attribute))(COLORSYMBOL(self));
 #ifdef USE_OPENGL
-  if ( (*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)) ) {
-    glEnable(GL_CULL_FACE);
-  }
-  else {
-    glDisable(GL_CULL_FACE);
-  }
+      if ( (*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)) ) {
+	glEnable(GL_CULL_FACE);
+      }
+      else {
+	glDisable(GL_CULL_FACE);
+      }
 #else
-  backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
+      backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
 #endif
-  mat= (*(ASSIST(self)->material_attribute))(MATERIALSYMBOL(self));
+      mat= (*(ASSIST(self)->material_attribute))(MATERIALSYMBOL(self));
 	
   /* prepare attributes*/
   /* we've already defined all of our materials at open time... :)*/
   /* Note: there is a significant performance penalty for frequently
    * changing the current material via lmbind...*/
 
-  if (CURMATERIAL(self) != mat->type) update_materials(self,mat->type);
+      if (CURMATERIAL(self) != mat->type) update_materials(self,mat->type);
 
-  /*Set color mode...*/
+      /*Set color mode...*/
 #ifdef USE_OPENGL
-  if (it->color_mode) {
-    glEnable(GL_LIGHTING);
-  }
-  else {
-    glDisable(GL_LIGHTING);
-  }
+      if (it->color_mode) {
+	glEnable(GL_LIGHTING);
+      }
+      else {
+	glDisable(GL_LIGHTING);
+      }
 #else
-  lmcolor(it->color_mode); /*Some like it AD, some like it COLOR...*/
+      lmcolor(it->color_mode); /*Some like it AD, some like it COLOR...*/
 #endif
 
-  /* What we're doing in the above call is distinguishing between the
+      /* What we're doing in the above call is distinguishing between the
    * case in which we're updating the COLOR of an object and the case
    * in which we're updating the color of the MATERIAL of the object.
    * 
@@ -1216,60 +1216,60 @@ static int ren_prim_setup( P_Renderer* self, gl_gob* it,
    */
 	
   /*Set color...*/
-  rgbify_color(pcolor);
+      rgbify_color(pcolor);
 
-  color[0]= pcolor->r;
-  color[1]= pcolor->g;
-  color[2]= pcolor->b;
-  color[3]= pcolor->a;
+      color[0]= pcolor->r;
+      color[1]= pcolor->g;
+      color[2]= pcolor->b;
+      color[3]= pcolor->a;
 #ifdef USE_OPENGL
-  glColor4fv(color);
+      glColor4fv(color);
 #else
-  c4f(color);
+      c4f(color);
 #endif
 
-  if ((! hastransparent) && (color[3] < .5)) {
-    screen_door_transp(1);
-    screendoor_set= 1;
-  }
+      if ((! hastransparent) && (color[3] < .5)) {
+	screen_door_transp(1);
+	screendoor_set= 1;
+      }
 
-  /*we should almost never need this segment, but then again,
+      /*we should almost never need this segment, but then again,
 	  we might... */
-  if (trans) {
+      if (trans) {
 #ifdef USE_OPENGL
-    glPushMatrix();
+	glPushMatrix();
 #else
-    pushmatrix();
+	pushmatrix();
 #endif
-    ren_transform(*trans);
-  }
+	ren_transform(*trans);
+      }
 
-  return screendoor_set;
-}
+      return screendoor_set;
+    }
 
-static void ren_prim_finish( P_Transform *trans, int screendoor_set )
-{
-  if (trans)
+  static void ren_prim_finish( P_Transform *trans, int screendoor_set )
+    {
+      if (trans)
 #ifdef USE_OPENGL
-    glPopMatrix();
+	glPopMatrix();
 #else
-    popmatrix();
+      popmatrix();
 #endif
   
-  if (screendoor_set) {
-    screen_door_transp(0);
-  }
-}
+      if (screendoor_set) {
+	screen_door_transp(0);
+      }
+    }
 
-static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
-		     P_Attrib_List *attrs) {
+  static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
+		       P_Attrib_List *attrs) {
     
     /*P_Transform is an struct which contains float d[16];*/
     /*P_Attrib is a struct of
-        P_Symbol attribute; where P_Symbol is just a P_Void_ptr
-        int type; where type is te value type
-        P_Void_ptr value;
-        and two structs for the next and prev things in the list.
+      P_Symbol attribute; where P_Symbol is just a P_Void_ptr
+      int type; where type is te value type
+      P_Void_ptr value;
+      and two structs for the next and prev things in the list.
     */
 
     P_Renderer *self = (P_Renderer *)po_this;
@@ -1292,7 +1292,7 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
     int loope;
     METHOD_IN
 	
-    gl_gob *it = (gl_gob *)the_thing;
+      gl_gob *it = (gl_gob *)the_thing;
     
     if (RENDATA(self)->open) {
       ger_debug("gl_ren_mthd: ren_mesh");
@@ -1439,403 +1439,403 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
 
       /*Gee, wasn't that easy? :)  */
       METHOD_OUT
-    }
-}
+	}
+  }
 
-static void ren_sphere(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it = (gl_gob *)the_thing;
-  int screendoor_set;
-  METHOD_IN
+  static void ren_sphere(P_Void_ptr the_thing, P_Transform *transform,
+			 P_Attrib_List *attrs) {
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it = (gl_gob *)the_thing;
+    int screendoor_set;
+    METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_sphere");
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_sphere: null object data found.");
-      METHOD_OUT
-      return;
-    }
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: ren_sphere");
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_sphere: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
 
 #ifdef AVOID_NURBS
-    METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_sphere))(the_thing, transform, attrs);
+	METHOD_RDY(ASSIST(self));
+	(*(ASSIST(self)->ren_sphere))(the_thing, transform, attrs);
 #else
 
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
-    if (it->obj_info.quad_obj) 
-      gluSphere(it->obj_info.quad_obj, 1.0, SPHERE_SLICES, SPHERE_STACKS);
+	if (it->obj_info.quad_obj) 
+	  gluSphere(it->obj_info.quad_obj, 1.0, SPHERE_SLICES, SPHERE_STACKS);
 #else
-    if (it->obj_info.obj) callobj(it->obj_info.obj);
+	if (it->obj_info.obj) callobj(it->obj_info.obj);
 #endif
-    else ger_error("gl_ren_mthd: ren_sphere: null sphere obj found!");
+	else ger_error("gl_ren_mthd: ren_sphere: null sphere obj found!");
 
-    ren_prim_finish( transform, screendoor_set );
+	ren_prim_finish( transform, screendoor_set );
 
 #endif
 
-    METHOD_OUT
+	METHOD_OUT
+	  }
   }
-}
 
-static void ren_cylinder(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it = (gl_gob *)the_thing;
-  int screendoor_set;
-  METHOD_IN
+  static void ren_cylinder(P_Void_ptr the_thing, P_Transform *transform,
+			   P_Attrib_List *attrs) {
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it = (gl_gob *)the_thing;
+    int screendoor_set;
+    METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_cylinder");
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_cylinder: null object data found.");
-      METHOD_OUT
-      return;
-    }
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: ren_cylinder");
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_cylinder: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
 #ifdef AVOID_NURBS
-    METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_cylinder))(the_thing, transform, attrs);
+	METHOD_RDY(ASSIST(self));
+	(*(ASSIST(self)->ren_cylinder))(the_thing, transform, attrs);
 #else
 
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
-    if (it->obj_info.quad_obj) {
-      gluCylinder(it->obj_info.quad_obj, 1.0, 1.0, 1.0, 
-		  CYLINDER_SLICES, CYLINDER_STACKS);
-      gluQuadricOrientation(it->obj_info.quad_obj, GLU_INSIDE);
-      gluDisk( it->obj_info.quad_obj, 0.0, 1.0, CYLINDER_SLICES, 1 );
-      glTranslatef(0.0,0.0,1.0);
-      gluQuadricOrientation(it->obj_info.quad_obj, GLU_OUTSIDE);
-      gluDisk( it->obj_info.quad_obj, 0.0, 1.0, CYLINDER_SLICES, 1 );
-    }
+	if (it->obj_info.quad_obj) {
+	  gluCylinder(it->obj_info.quad_obj, 1.0, 1.0, 1.0, 
+		      CYLINDER_SLICES, CYLINDER_STACKS);
+	  gluQuadricOrientation(it->obj_info.quad_obj, GLU_INSIDE);
+	  gluDisk( it->obj_info.quad_obj, 0.0, 1.0, CYLINDER_SLICES, 1 );
+	  glTranslatef(0.0,0.0,1.0);
+	  gluQuadricOrientation(it->obj_info.quad_obj, GLU_OUTSIDE);
+	  gluDisk( it->obj_info.quad_obj, 0.0, 1.0, CYLINDER_SLICES, 1 );
+	}
 #else
-    if (it->obj_info.obj) callobj(it->obj_info.obj);
+	if (it->obj_info.obj) callobj(it->obj_info.obj);
 #endif
-    else ger_error("gl_ren_mthd: ren_cylinder: null cylinder obj found!");
+	else ger_error("gl_ren_mthd: ren_cylinder: null cylinder obj found!");
 
-    ren_prim_finish( transform, screendoor_set );
+	ren_prim_finish( transform, screendoor_set );
 
 #endif
-    METHOD_OUT
+	METHOD_OUT
+	  }
   }
-}
 
-static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it = (gl_gob *)the_thing;
-  int screendoor_set;
-  METHOD_IN
+  static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
+			P_Attrib_List *attrs) {
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it = (gl_gob *)the_thing;
+    int screendoor_set;
+    METHOD_IN
 	    
-  if (RENDATA(self)->open) {
+      if (RENDATA(self)->open) {
 
-    ger_debug("gl_ren_mthd: ren_torus");
+	ger_debug("gl_ren_mthd: ren_torus");
 
 #ifdef AVOID_NURBS
-    METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_torus))(the_thing, transform, attrs);
+	METHOD_RDY(ASSIST(self));
+	(*(ASSIST(self)->ren_torus))(the_thing, transform, attrs);
 #else
 
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_torus: null object data found.");
-      METHOD_OUT
-      return;
-    }
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_torus: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
 
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
-    if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
-	gluBeginSurface( it->obj_info.nurbs_obj.ren );
-	gluNurbsSurface( it->obj_info.nurbs_obj.ren, 12, knots, 12, knots,  
-			4,  4 * 9,  
-			it->obj_info.nurbs_obj.data,  3,  3,  GL_MAP2_VERTEX_4);
-	gluEndSurface( it->obj_info.nurbs_obj.ren );
-    }
+	if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
+	  gluBeginSurface( it->obj_info.nurbs_obj.ren );
+	  gluNurbsSurface( it->obj_info.nurbs_obj.ren, 12, knots, 12, knots,  
+			   4,  4 * 9,  
+			   it->obj_info.nurbs_obj.data,  3,  3,  GL_MAP2_VERTEX_4);
+	  gluEndSurface( it->obj_info.nurbs_obj.ren );
+	}
 
 #else
 
-    if (it->obj_info.nurbs_obj) {
-      bgnsurface();
-      nurbssurface(12,knots,12,knots,
-		   4*sizeof(double), 4*sizeof(double) * 9,
-		   it->obj_info.nurbs_obj, 3, 3, N_V3DR);
-      endsurface();      
-    }
+	if (it->obj_info.nurbs_obj) {
+	  bgnsurface();
+	  nurbssurface(12,knots,12,knots,
+		       4*sizeof(double), 4*sizeof(double) * 9,
+		       it->obj_info.nurbs_obj, 3, 3, N_V3DR);
+	  endsurface();      
+	}
 
 #endif
-    else ger_error("gl_ren_mthd: ren_torus: null torus obj found!");
+	else ger_error("gl_ren_mthd: ren_torus: null torus obj found!");
 
-    ren_prim_finish( transform, screendoor_set );
+	ren_prim_finish( transform, screendoor_set );
 
 #endif
-    METHOD_OUT
+	METHOD_OUT
+	  }
   }
-}
 
-static void ren_bezier(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it = (gl_gob *)the_thing;
-  int screendoor_set;
-  METHOD_IN
+  static void ren_bezier(P_Void_ptr the_thing, P_Transform *transform,
+			 P_Attrib_List *attrs) {
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it = (gl_gob *)the_thing;
+    int screendoor_set;
+    METHOD_IN
 	    
-  if (RENDATA(self)->open) {
+      if (RENDATA(self)->open) {
 
-    ger_debug("gl_ren_mthd: ren_bezier");
+	ger_debug("gl_ren_mthd: ren_bezier");
 #ifdef AVOID_NURBS
-    METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_bezier))(the_thing, transform, attrs);
+	METHOD_RDY(ASSIST(self));
+	(*(ASSIST(self)->ren_bezier))(the_thing, transform, attrs);
 #else
 
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_bezier: null object data found.");
-      METHOD_OUT
-      return;
-    }
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_bezier: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
 
-    if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
-      static GLfloat bez_knots[8]= {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
-      gluBeginSurface( it->obj_info.nurbs_obj.ren );
-      if (it->obj_info.nurbs_obj.flags) {
-	/* color info is present */
-	GLfloat* clr_data= it->obj_info.nurbs_obj.data + 3*16;
-	gluNurbsSurface( it->obj_info.nurbs_obj.ren, 
-			 8, bez_knots, 8, bez_knots, 4, 4*4, 
-			 clr_data,  4,  4,  
-			 GL_MAP2_COLOR_4);
-      }
-      gluNurbsSurface( it->obj_info.nurbs_obj.ren, 
-		       8, bez_knots, 8, bez_knots, 3, 4*3, 
-		       it->obj_info.nurbs_obj.data,  4,  4,  GL_MAP2_VERTEX_3);
-      gluEndSurface( it->obj_info.nurbs_obj.ren );
-    }
+	if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
+	  static GLfloat bez_knots[8]= {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
+	  gluBeginSurface( it->obj_info.nurbs_obj.ren );
+	  if (it->obj_info.nurbs_obj.flags) {
+	    /* color info is present */
+	    GLfloat* clr_data= it->obj_info.nurbs_obj.data + 3*16;
+	    gluNurbsSurface( it->obj_info.nurbs_obj.ren, 
+			     8, bez_knots, 8, bez_knots, 4, 4*4, 
+			     clr_data,  4,  4,  
+			     GL_MAP2_COLOR_4);
+	  }
+	  gluNurbsSurface( it->obj_info.nurbs_obj.ren, 
+			   8, bez_knots, 8, bez_knots, 3, 4*3, 
+			   it->obj_info.nurbs_obj.data,  4,  4,  GL_MAP2_VERTEX_3);
+	  gluEndSurface( it->obj_info.nurbs_obj.ren );
+	}
 
 #else
-    if (it->obj_info.obj) callobj(it->obj_info.obj);
+	if (it->obj_info.obj) callobj(it->obj_info.obj);
 
 #endif
-    else ger_error("gl_ren_mthd: ren_torus: null bezier obj found!");
+	else ger_error("gl_ren_mthd: ren_torus: null bezier obj found!");
 
-    ren_prim_finish( transform, screendoor_set );
+	ren_prim_finish( transform, screendoor_set );
 
 #endif
-    METHOD_OUT
+	METHOD_OUT
+	  }
   }
-}
 
-static void ren_polyline(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
-    
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it= (gl_gob*)the_thing;
-  int screendoor_set;
-  METHOD_IN
-
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_polyline");
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_polyline: null object data found.");
-      METHOD_OUT
-      return;
-    }
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
-    if (it->cvlist) {
-#ifdef USE_OPENGL
-      glBegin(GL_LINE_STRIP);
-#else
-      bgnline();
-#endif
-
-      send_cached_vlist( it->cvlist );
-
-#ifdef USE_OPENGL
-      glEnd();
-#else
-      endline();
-#endif
-    }
-    else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
-    ren_prim_finish( transform, screendoor_set );
-  }
-  METHOD_OUT
-}
-
-static void ren_polygon(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
-    
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it= (gl_gob*)the_thing;
-  int screendoor_set;
-  METHOD_IN
-
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_polygon");
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_polygon: null object data found.");
-      METHOD_OUT
-      return;
-    }
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
-
-    if (it->cvlist) {
-#ifdef USE_OPENGL
-      glBegin(GL_POLYGON);
-#else      
-      bgnpolygon();
-#endif
-      send_cached_vlist( it->cvlist );
-#ifdef USE_OPENGL
-      glEnd();
-#else
-      endpolygon();
-#endif
-    }
-    else ger_error("gl_ren_mthd: ren_polygon: null cvlist found!");
-    ren_prim_finish( transform, screendoor_set );
-  }
-  METHOD_OUT
-}
-
-static void ren_polymarker(P_Void_ptr the_thing, P_Transform *transform,
+  static void ren_polyline(P_Void_ptr the_thing, P_Transform *transform,
 			   P_Attrib_List *attrs) {
     
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it= (gl_gob*)the_thing;
-  int screendoor_set;
-  METHOD_IN
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it= (gl_gob*)the_thing;
+    int screendoor_set;
+    METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_polymarker");
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_polymarker: null object data found.");
-      METHOD_OUT
-      return;
-    }
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
-    if (it->cvlist) {
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: ren_polyline");
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_polyline: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	if (it->cvlist) {
 #ifdef USE_OPENGL
-      glBegin(GL_POINTS);
+	  glBegin(GL_LINE_STRIP);
 #else
-      bgnpoint();
+	  bgnline();
 #endif
-      send_cached_vlist( it->cvlist );
-#ifdef USE_OPENGL
-      glEnd();
-#else
-      endpoint();
-#endif
-    }
-    else ger_error("gl_ren_mthd: ren_polymarker: null cvlist found!");
-    ren_prim_finish( transform, screendoor_set );
-  }
-  METHOD_OUT
-}
 
-static void ren_tristrip(P_Void_ptr the_thing, P_Transform *transform,
-		P_Attrib_List *attrs) {
+	  send_cached_vlist( it->cvlist );
+
+#ifdef USE_OPENGL
+	  glEnd();
+#else
+	  endline();
+#endif
+	}
+	else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
+	ren_prim_finish( transform, screendoor_set );
+      }
+    METHOD_OUT
+      }
+
+  static void ren_polygon(P_Void_ptr the_thing, P_Transform *transform,
+			  P_Attrib_List *attrs) {
     
-  P_Renderer *self = (P_Renderer *)po_this;
-  gl_gob *it= (gl_gob*)the_thing;
-  int screendoor_set;
-  METHOD_IN
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it= (gl_gob*)the_thing;
+    int screendoor_set;
+    METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_polyline");
-    if (!it) {
-      ger_error("gl_ren_mthd: ren_polyline: null object data found.");
-      METHOD_OUT
-      return;
-    }
-    screendoor_set= ren_prim_setup( self, it, transform, attrs );
-    if (it->cvlist) {
-#ifdef USE_OPENGL
-      glBegin(GL_TRIANGLE_STRIP);
-#else
-      bgntmesh();
-#endif
-      send_cached_vlist( it->cvlist );
-#ifdef USE_OPENGL
-      glEnd();
-#else
-      endtmesh();
-#endif
-    }
-    else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
-    ren_prim_finish( transform, screendoor_set );
-  }
-  METHOD_OUT
-}
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: ren_polygon");
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_polygon: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
-static P_Void_ptr def_sphere(char *name) {
+	if (it->cvlist) {
+#ifdef USE_OPENGL
+	  glBegin(GL_POLYGON);
+#else      
+	  bgnpolygon();
+#endif
+	  send_cached_vlist( it->cvlist );
+#ifdef USE_OPENGL
+	  glEnd();
+#else
+	  endpolygon();
+#endif
+	}
+	else ger_error("gl_ren_mthd: ren_polygon: null cvlist found!");
+	ren_prim_finish( transform, screendoor_set );
+      }
+    METHOD_OUT
+      }
+
+  static void ren_polymarker(P_Void_ptr the_thing, P_Transform *transform,
+			     P_Attrib_List *attrs) {
+    
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it= (gl_gob*)the_thing;
+    int screendoor_set;
+    METHOD_IN
+
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: ren_polymarker");
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_polymarker: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	if (it->cvlist) {
+#ifdef USE_OPENGL
+	  glBegin(GL_POINTS);
+#else
+	  bgnpoint();
+#endif
+	  send_cached_vlist( it->cvlist );
+#ifdef USE_OPENGL
+	  glEnd();
+#else
+	  endpoint();
+#endif
+	}
+	else ger_error("gl_ren_mthd: ren_polymarker: null cvlist found!");
+	ren_prim_finish( transform, screendoor_set );
+      }
+    METHOD_OUT
+      }
+
+  static void ren_tristrip(P_Void_ptr the_thing, P_Transform *transform,
+			   P_Attrib_List *attrs) {
+    
+    P_Renderer *self = (P_Renderer *)po_this;
+    gl_gob *it= (gl_gob*)the_thing;
+    int screendoor_set;
+    METHOD_IN
+
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: ren_polyline");
+	if (!it) {
+	  ger_error("gl_ren_mthd: ren_polyline: null object data found.");
+	  METHOD_OUT
+	    return;
+	}
+	screendoor_set= ren_prim_setup( self, it, transform, attrs );
+	if (it->cvlist) {
+#ifdef USE_OPENGL
+	  glBegin(GL_TRIANGLE_STRIP);
+#else
+	  bgntmesh();
+#endif
+	  send_cached_vlist( it->cvlist );
+#ifdef USE_OPENGL
+	  glEnd();
+#else
+	  endtmesh();
+#endif
+	}
+	else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
+	ren_prim_finish( transform, screendoor_set );
+      }
+    METHOD_OUT
+      }
+
+  static P_Void_ptr def_sphere(char *name) {
     /*Define a unit sphere at the origin and return it.*/
     
-  P_Renderer *self= (P_Renderer *)po_this;
-  gl_gob *it;
-  P_Void_ptr result;
-  METHOD_IN
+    P_Renderer *self= (P_Renderer *)po_this;
+    gl_gob *it;
+    P_Void_ptr result;
+    METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: def_sphere");
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: def_sphere");
 
 #ifdef USE_OPENGL
-    if (SPHERE_DEFINED(self)) {
-      METHOD_OUT
-      return((P_Void_ptr)SPHERE(self));
-    }
+	if (SPHERE_DEFINED(self)) {
+	  METHOD_OUT
+	    return((P_Void_ptr)SPHERE(self));
+	}
 #else
-    if (my_sphere) {
-      METHOD_OUT
-      return((P_Void_ptr)my_sphere);
-    }
+	if (my_sphere) {
+	  METHOD_OUT
+	    return((P_Void_ptr)my_sphere);
+	}
 #endif
 
 #ifdef AVOID_NURBS
-    METHOD_RDY(ASSIST(self));
+	METHOD_RDY(ASSIST(self));
 #ifdef USE_OPENGL
-    result= SPHERE(self)= (*(ASSIST(self)->def_sphere))();
-    SPHERE_DEFINED(self)= 1;
+	result= SPHERE(self)= (*(ASSIST(self)->def_sphere))();
+	SPHERE_DEFINED(self)= 1;
 #else
-    my_sphere= result= (*(ASSIST(self)->def_sphere))();
+	my_sphere= result= (*(ASSIST(self)->def_sphere))();
 #endif
-    METHOD_OUT
-    return( (P_Void_ptr)result );
+	METHOD_OUT
+	  return( (P_Void_ptr)result );
 #else
 
-    if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-      ger_fatal("def_sphere: unable to allocate %d bytes!", sizeof(gl_gob));
+	if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
+	  ger_fatal("def_sphere: unable to allocate %d bytes!", sizeof(gl_gob));
 
 #ifdef USE_OPENGL
-    it->obj_info.quad_obj= gluNewQuadric();
-    it->color_mode= 1;
-    SPHERE(self)= it;
-    SPHERE_DEFINED(self)= 1;
+	it->obj_info.quad_obj= gluNewQuadric();
+	it->color_mode= 1;
+	SPHERE(self)= it;
+	SPHERE_DEFINED(self)= 1;
 #else
 
-    sphobj( it->obj_info.obj= genobj() );
-    it->color_mode = LMC_AD;
+	sphobj( it->obj_info.obj= genobj() );
+	it->color_mode = LMC_AD;
 
 #endif
 
-    it->cvlist= NULL;
-    METHOD_OUT
-    return((P_Void_ptr)it);
+	it->cvlist= NULL;
+	METHOD_OUT
+	  return((P_Void_ptr)it);
 
 #endif
-  }
+      }
   
-  METHOD_OUT
-  return((P_Void_ptr)0); /* not reached */
-}
+    METHOD_OUT
+      return((P_Void_ptr)0); /* not reached */
+  }
 
 #ifndef USE_OPENGL
-void mycircle(float radius, int up) {
+  void mycircle(float radius, int up) {
     /*Necessary for def_cylinder to work
       properly: draws a circle of radius radius
       in the xy plane at the origin.*/
@@ -1850,9 +1850,9 @@ void mycircle(float radius, int up) {
 
     nor[0] = nor[1] = 0;
     if (up)
-	nor[2] = 1;
+      nor[2] = 1;
     else
-	nor[2] = -1;
+      nor[2] = -1;
     
     bgntmesh();
     n3f(nor);
@@ -1880,497 +1880,497 @@ void mycircle(float radius, int up) {
     
     endtmesh();
 #undef NSIDES
-}
+  }
 #endif
 
-static P_Void_ptr def_cylinder(char *name) 
-{
-  P_Renderer *self= (P_Renderer *)po_this;
-  P_Void_ptr result;
-  gl_gob *it;
-  METHOD_IN;
+  static P_Void_ptr def_cylinder(char *name) 
+    {
+      P_Renderer *self= (P_Renderer *)po_this;
+      P_Void_ptr result;
+      gl_gob *it;
+      METHOD_IN;
   
-  if (RENDATA(self)->open) {
+      if (RENDATA(self)->open) {
     
-    ger_debug("gl_ren_mthd: def_cylinder");
+	ger_debug("gl_ren_mthd: def_cylinder");
     
-    /*DON'T redefine things!*/
+	/*DON'T redefine things!*/
 #ifdef USE_OPENGL
-    if (CYLINDER_DEFINED(self)) {
-      METHOD_OUT
-      return((P_Void_ptr)CYLINDER(self));
-    }
+	if (CYLINDER_DEFINED(self)) {
+	  METHOD_OUT
+	    return((P_Void_ptr)CYLINDER(self));
+	}
 #else
-    if (my_cylinder) {
-      METHOD_OUT
-      return((P_Void_ptr)my_cylinder);
-    }
+	if (my_cylinder) {
+	  METHOD_OUT
+	    return((P_Void_ptr)my_cylinder);
+	}
 #endif
     
 #ifdef AVOID_NURBS
-    METHOD_RDY(ASSIST(self));
-    result= (*(ASSIST(self)->def_cylinder))();
-    METHOD_OUT
-    return( (P_Void_ptr)result );
+	METHOD_RDY(ASSIST(self));
+	result= (*(ASSIST(self)->def_cylinder))();
+	METHOD_OUT
+	  return( (P_Void_ptr)result );
 #else
     
-    if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-      ger_fatal("def_cylinder: unable to allocate %d bytes!", sizeof(gl_gob));
+	if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
+	  ger_fatal("def_cylinder: unable to allocate %d bytes!", sizeof(gl_gob));
     
 #ifdef USE_OPENGL
-    it->obj_info.quad_obj= gluNewQuadric();
-    it->color_mode= 1;
-    it->cvlist= NULL;
-    CYLINDER(self)= it;
-    CYLINDER_DEFINED(self)= 1;
+	it->obj_info.quad_obj= gluNewQuadric();
+	it->color_mode= 1;
+	it->cvlist= NULL;
+	CYLINDER(self)= it;
+	CYLINDER_DEFINED(self)= 1;
 #else
-    {
-      double surfknotsx[CYL_NUMKNOTSX] = { -1., -1., 1., 1. };
+	{
+	  double surfknotsx[CYL_NUMKNOTSX] = { -1., -1., 1., 1. };
     
-      double surfknotsy[CYL_NUMKNOTSY] = 
-      { -1., -1., -1., -1., -1., -1., 1., 1., 1., 1., 1., 1. };
+	  double surfknotsy[CYL_NUMKNOTSY] = 
+	  { -1., -1., -1., -1., -1., -1., 1., 1., 1., 1., 1., 1. };
     
 #define CON1 1.775
 #define CON2 2.2
-      double ctlpoints[CYL_NUMPOINTSY][CYL_NUMPOINTSX * CYL_NUMCOORDS] = {
-      -1.0,  0.0,  0.0,
-      -1.0,  0.0,  1.0,
-      -1.0,  CON1,  0.0,
-      -1.0,  CON1,  1.0,
-      CON2,  CON1,  0.0,
-      CON2,  CON1,  1.0,
-      CON2, -CON1,  0.0,
-      CON2, -CON1,  1.0,
-      -1.0, -CON1,  0.0,
-      -1.0, -CON1,  1.0,
-      -1.0,  0.0,  0.0,
-      -1.0,  0.0,  1.0};
+	  double ctlpoints[CYL_NUMPOINTSY][CYL_NUMPOINTSX * CYL_NUMCOORDS] = {
+	    -1.0,  0.0,  0.0,
+	    -1.0,  0.0,  1.0,
+	    -1.0,  CON1,  0.0,
+	    -1.0,  CON1,  1.0,
+	    CON2,  CON1,  0.0,
+	    CON2,  CON1,  1.0,
+	    CON2, -CON1,  0.0,
+	    CON2, -CON1,  1.0,
+	    -1.0, -CON1,  0.0,
+	    -1.0, -CON1,  1.0,
+	    -1.0,  0.0,  0.0,
+	    -1.0,  0.0,  1.0};
 #undef CON1
 #undef CON2
 
-      /*As of now, we're defining the object*/
-      makeobj( it->obj_info.obj=genobj() );
-      it->color_mode = LMC_AD;
-      it->cvlist= NULL;
-      translate(0, 0, 1);
-      mycircle(1.0, TRUE);
-      translate(0, 0, 0);
-      mycircle(1.0, FALSE);
+	  /*As of now, we're defining the object*/
+	  makeobj( it->obj_info.obj=genobj() );
+	  it->color_mode = LMC_AD;
+	  it->cvlist= NULL;
+	  translate(0, 0, 1);
+	  mycircle(1.0, TRUE);
+	  translate(0, 0, 0);
+	  mycircle(1.0, FALSE);
       
-      bgnsurface();
-      nurbssurface( 
-		   sizeof( surfknotsx) / sizeof( double ), surfknotsx, 
-		   sizeof( surfknotsy) / sizeof( double ), surfknotsy, 
-		   sizeof(double) * CYL_NUMCOORDS, 
-		   sizeof(double) * CYL_NUMPOINTSX * CYL_NUMCOORDS, 
-		   (double *)ctlpoints, 
-		   CYL_ORDERX, CYL_ORDERY, 
-		   N_V3D
-		   );
-      endsurface();
+	  bgnsurface();
+	  nurbssurface( 
+		       sizeof( surfknotsx) / sizeof( double ), surfknotsx, 
+		       sizeof( surfknotsy) / sizeof( double ), surfknotsy, 
+		       sizeof(double) * CYL_NUMCOORDS, 
+		       sizeof(double) * CYL_NUMPOINTSX * CYL_NUMCOORDS, 
+		       (double *)ctlpoints, 
+		       CYL_ORDERX, CYL_ORDERY, 
+		       N_V3D
+		       );
+	  endsurface();
       
-      closeobj();
-      my_cylinder = it;
-    }
-#endif
-    METHOD_OUT
-    return( (P_Void_ptr)it );
-    
-#endif
-    
-  }
-  METHOD_OUT
-  return((P_Void_ptr)0);
-}
-
-static P_Void_ptr def_torus(char *name, double major, double minor) {
-  P_Renderer *self= (P_Renderer *)po_this;
-  gl_gob *it;
-  P_Void_ptr result;
-  METHOD_IN
-  
-  if (RENDATA(self)->open) {
-      ger_debug("gl_ren_mthd: def_torus");
-#ifdef AVOID_NURBS
-      METHOD_RDY(ASSIST(self));
-      result= (*(ASSIST(self)->def_torus))(major,minor);
-      
-      METHOD_OUT
-      return( (P_Void_ptr)result );
-#else
-      {
-	int i, j;
-#ifdef USE_OPENGL
-	GLfloat* knot_data= NULL;
-	GLfloat* runner;
-#else
-	double* knot_data= NULL;
-	double* runner;
-#endif
-	
-	if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-	  ger_fatal("def_torus: unable to allocate %d bytes!", 
-		    sizeof(gl_gob));
-#ifdef USE_OPENGL
-	if ( !(knot_data= (GLfloat*)malloc(9*9*4*sizeof(GLfloat))) )
-#else
-	if ( !(knot_data= (double*)malloc(9*9*4*sizeof(double))) )
-#endif
-	  ger_fatal("def_torus: unable to allocate %d bytes!",
-		    9*9*4*sizeof(double));
-	
-	runner= knot_data;
-	for(j=0;j<9;j++)  {
-	  for(i=0;i<9;i++)  {
-	    *runner++= (minor * bx[j] + major * w[j]) * bx[i];
-	    *runner++= (minor * bx[j] + major * w[j]) * by[i];
-	    *runner++= minor * w[i] * by[j];
-	    *runner++= w[i] * w[j];
-	  }
+	  closeobj();
+	  my_cylinder = it;
 	}
-	
-#ifdef USE_OPENGL
-	it->obj_info.nurbs_obj.data= knot_data;
-	it->obj_info.nurbs_obj.ren= gluNewNurbsRenderer();
-	it->obj_info.nurbs_obj.flags= 0;
-	it->color_mode= 1;
-#else
-	it->obj_info.nurbs_obj= knot_data;
-	it->color_mode= LMC_AD;
 #endif
-	it->cvlist= NULL;
-	
 	METHOD_OUT
-	return((P_Void_ptr)it);
-      }
-#endif
-  }
-  METHOD_OUT
-  return((P_Void_ptr)0);
-}
-
-static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
-		P_Attrib_List *thisattrlist) {
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
-	
-  ger_debug("gl_ren_mthd: ren_gob\n");
-  
-  if (RENDATA(self)->open) {
+	  return( (P_Void_ptr)it );
     
-    if (!(RENDATA(self)->initialized)) {
-      init_gl_gl(self);
-      RENDATA(self)->initialized= 1;
+#endif
+    
+      }
+      METHOD_OUT
+	return((P_Void_ptr)0);
     }
 
-    if (primdata) {
-      P_Gob *thisgob;
-      int error=0;
-      int top_level_call=0;
-      P_Gob_List *kidlist;
-      float *back;
-      
-      thisgob= (P_Gob *)primdata;
-
-      if (thisattrlist) {
+  static P_Void_ptr def_torus(char *name, double major, double minor) {
+    P_Renderer *self= (P_Renderer *)po_this;
+    gl_gob *it;
+    P_Void_ptr result;
+    METHOD_IN
+  
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: def_torus");
+#ifdef AVOID_NURBS
 	METHOD_RDY(ASSIST(self));
-	(*(ASSIST(self)->push_attributes))( thisattrlist );
-      }
+	result= (*(ASSIST(self)->def_torus))(major,minor);
       
-      if (thisgob->attr) {
-	METHOD_RDY(ASSIST(self));
-	(*(ASSIST(self)->push_attributes))( thisgob->attr );
+	METHOD_OUT
+	  return( (P_Void_ptr)result );
+#else
+	{
+	  int i, j;
+#ifdef USE_OPENGL
+	  GLfloat* knot_data= NULL;
+	  GLfloat* runner;
+#else
+	  double* knot_data= NULL;
+	  double* runner;
+#endif
+	
+	  if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
+	    ger_fatal("def_torus: unable to allocate %d bytes!", 
+		      sizeof(gl_gob));
+#ifdef USE_OPENGL
+	  if ( !(knot_data= (GLfloat*)malloc(9*9*4*sizeof(GLfloat))) )
+#else
+	    if ( !(knot_data= (double*)malloc(9*9*4*sizeof(double))) )
+#endif
+	      ger_fatal("def_torus: unable to allocate %d bytes!",
+			9*9*4*sizeof(double));
+	
+	  runner= knot_data;
+	  for(j=0;j<9;j++)  {
+	    for(i=0;i<9;i++)  {
+	      *runner++= (minor * bx[j] + major * w[j]) * bx[i];
+	      *runner++= (minor * bx[j] + major * w[j]) * by[i];
+	      *runner++= minor * w[i] * by[j];
+	      *runner++= w[i] * w[j];
+	    }
+	  }
+	
+#ifdef USE_OPENGL
+	  it->obj_info.nurbs_obj.data= knot_data;
+	  it->obj_info.nurbs_obj.ren= gluNewNurbsRenderer();
+	  it->obj_info.nurbs_obj.flags= 0;
+	  it->color_mode= 1;
+#else
+	  it->obj_info.nurbs_obj= knot_data;
+	  it->color_mode= LMC_AD;
+#endif
+	  it->cvlist= NULL;
+	
+	  METHOD_OUT
+	    return((P_Void_ptr)it);
+	}
+#endif
       }
-      
-      /* If thistrans is non-null, this is a top-level call to
-       * ren_gob, as opposed to a recursive call.
-       */
-      if (thistrans) {
-	unsigned long cval;
-	unsigned int xsize, ysize;
-	int x_corner, y_corner;
+    METHOD_OUT
+      return((P_Void_ptr)0);
+  }
 
-	top_level_call = 1;
+  static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
+		      P_Attrib_List *thisattrlist) {
+    P_Renderer *self= (P_Renderer *)po_this;
+    METHOD_IN
+	
+      ger_debug("gl_ren_mthd: ren_gob\n");
+  
+    if (RENDATA(self)->open) {
+    
+      if (!(RENDATA(self)->initialized)) {
+	init_gl_gl(self);
+	RENDATA(self)->initialized= 1;
+      }
+
+      if (primdata) {
+	P_Gob *thisgob;
+	int error=0;
+	int top_level_call=0;
+	P_Gob_List *kidlist;
+	float *back;
+      
+	thisgob= (P_Gob *)primdata;
+
+	if (thisattrlist) {
+	  METHOD_RDY(ASSIST(self));
+	  (*(ASSIST(self)->push_attributes))( thisattrlist );
+	}
+      
+	if (thisgob->attr) {
+	  METHOD_RDY(ASSIST(self));
+	  (*(ASSIST(self)->push_attributes))( thisgob->attr );
+	}
+      
+	/* If thistrans is non-null, this is a top-level call to
+	 * ren_gob, as opposed to a recursive call.
+	 */
+	if (thistrans) {
+	  unsigned long cval;
+	  unsigned int xsize, ysize;
+	  int x_corner, y_corner;
+
+	  top_level_call = 1;
 
 #ifdef USE_OPENGL
 #if !defined(WIREGL) && !defined(CHROMIUM)
-	if (MANAGE(self) && !AUTO(self)) {
-	  /* We have to run a little event loop, because no one else is. */
-	  int event_pending= 1;
-	  long event_mask= 
-	    ( StructureNotifyMask | ExposureMask | ButtonPressMask | FocusChangeMask );
-	  while (event_pending) {
-	    XEvent event;
-	    if (XCheckWindowEvent(XDISPLAY(self),XWINDOW(self),
-				  event_mask,&event)) {
-	      /* Think what fun we could have parsing these! */
-	      switch (event.type) {
-	      case CirculateNotify: fprintf(stderr,"CirculateNotify\n"); break;
-	      case ConfigureNotify: fprintf(stderr,"ConfigureNotify\n"); break;
-	      case DestroyNotify: fprintf(stderr,"DestroyNotify\n"); break;
-	      case MapNotify: fprintf(stderr,"MapNotify\n"); break;
-	      case UnmapNotify: fprintf(stderr,"UnmapNotify\n"); break;
+	  if (MANAGE(self) && !AUTO(self)) {
+	    /* We have to run a little event loop, because no one else is. */
+	    int event_pending= 1;
+	    long event_mask= 
+	      ( StructureNotifyMask | ExposureMask | ButtonPressMask | FocusChangeMask );
+	    while (event_pending) {
+	      XEvent event;
+	      if (XCheckWindowEvent(XDISPLAY(self),XWINDOW(self),
+				    event_mask,&event)) {
+		/* Think what fun we could have parsing these! */
+		switch (event.type) {
+		case CirculateNotify: fprintf(stderr,"CirculateNotify\n"); break;
+		case ConfigureNotify: fprintf(stderr,"ConfigureNotify\n"); break;
+		case DestroyNotify: fprintf(stderr,"DestroyNotify\n"); break;
+		case MapNotify: fprintf(stderr,"MapNotify\n"); break;
+		case UnmapNotify: fprintf(stderr,"UnmapNotify\n"); break;
+		}
 	      }
+	      else event_pending= 0;
 	    }
-	    else event_pending= 0;
+	  }
+#endif
+#endif
+
+	  if (MANAGE(self)) set_drawing_window(self);
+	  get_drawing_area(self,&x_corner,&y_corner,&xsize,&ysize);
+	  ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
+
+#ifdef USE_OPENGL
+	  if (NPROCS(self)==0 || RANK(self)==0) {
+	    GLPROF("Clearing");
+	    glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
+			 BACKGROUND(self)[2], BACKGROUND(self)[3]);
+	    glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+	  }
+#if defined(WIREGL)
+	  if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
+#elif defined(CHROMIUM)
+	  if (NPROCS(self)>0) glBarrierExecCR( MASTER_BARRIER );
+#endif
+	  GLPROF("BuildingCoordTrans")
+	    glPushMatrix();
+	  gluLookAt(LOOKFROM(self).x,LOOKFROM(self).y,LOOKFROM(self).z,
+		    LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z, 
+		    LOOKUP(self).x, LOOKUP(self).y, LOOKUP(self).z);
+#else
+	  viewport (0, xsize + 1, 0, ysize + 1);
+	  lmcolor(LMC_COLOR);
+	  back = BACKGROUND(self);
+	  cval= ((int)((back[0]*255)+0.5))
+	    | (((int)((back[1]*255)+0.5)) << 8)
+	    | (((int)((back[2]*255)+0.5)) << 16)
+	    | (((int)((back[3]*255)+0.5)) << 24);
+	  GLPROF("Clearing");
+	  czclear(cval,getgconfig(GC_ZMIN));
+	  pushmatrix();
+	  lookat(LOOKFROM(self).x, LOOKFROM(self).y, LOOKFROM(self).z,
+		 LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z,
+		 LOOKANGLE(self));
+#endif
+	}
+	GLPROF(thisgob->name);
+	if ( thisgob->has_transform )
+	  ren_transform(thisgob->trans);
+      
+	/* There must be children to render, because if this was a primitive
+	 * this method would not be getting executed.
+	 */
+	kidlist= thisgob->children;
+	while (kidlist) {
+#ifdef USE_OPENGL
+	  glPushMatrix();
+#else
+	  pushmatrix();
+#endif
+
+	  METHOD_RDY(kidlist->gob);
+	  (*(kidlist->gob->render_to_ren))(self, (P_Transform *)0,
+					   (P_Attrib_List *)0);
+	  kidlist= kidlist->next;
+#ifdef USE_OPENGL
+	  glPopMatrix();
+#else
+	  popmatrix();
+#endif
+	}
+      
+	if (thisgob->attr) {
+	  METHOD_RDY(ASSIST(self));
+	  (*(ASSIST(self)->pop_attributes))( thisgob->attr );
+	}
+      
+	if (thisattrlist) {
+	  METHOD_RDY(ASSIST(self));
+	  (*(ASSIST(self)->pop_attributes))( thisattrlist );
+	}
+      
+	if (top_level_call) {
+#ifdef USE_OPENGL
+	  glPopMatrix();
+
+#if defined(WIREGL)
+	  if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
+
+	  if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0))
+	    wireGLSwapBuffers();
+#ifdef WIREGL_INSTRUMENT
+	  else if (MANAGE(self) && (NPROCS(self)!=0 || RANK(self)!=0))
+	    wireGLInstrumentNextFrame();
+#endif
+
+#elif defined(CHROMIUM)
+	  if (NPROCS(self)>0) glBarrierExecCR( MASTER_BARRIER );
+
+	  /* The crserver only executes the SwapBuffers() for the 0th client.
+	   * No need to test for rank==0 as we used to do.
+	   */
+	  if (MANAGE(self)) crSwapBuffersCR(0, 0);
+#else
+	  if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
+#endif
+	  glFlush();
+#else
+	  popmatrix();
+	  if (MANAGE(self)) swapbuffers();
+	  gflush();
+#endif
+	}
+      
+      }
+    }
+    METHOD_OUT
+      }
+
+  static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
+			    P_Attrib_List *thisattrlist )
+    /* This routine traverses a gob looking for lights. */
+    {
+      P_Renderer *self= (P_Renderer *)po_this;
+      P_Gob *thisgob = (P_Gob *)primdata;
+      P_Gob_List *kidlist;
+      register short lupe;
+      METHOD_IN
+
+	if (RENDATA(self)->open) {
+    
+	  if (primdata) {
+      
+	    ger_debug("gl_ren_mthd: traverse_gob\n");
+      
+	    /*First, check to see if this lighting gob has already been
+	      defined...*/
+	    /*If we're using the same lights as before don't bother to
+	      re-render them.*/
+      
+	    if (thisgob == DLIGHTBUFFER(self)) {
+	      METHOD_OUT
+		return;
+	    }
+	    /*Okay, *now* we need to render them. :)*/
+
+	    if (thistrans) {
+	      /* Top level call; initialize lighting state and traversal */
+
+	      if (MANAGE(self)) set_drawing_window(self);
+
+	      DLIGHTBUFFER(self) = thisgob;
+      
+	      /*Clear the ambient lighting...*/
+	      AMBIENTCOLOR(self)[0] = 0.0;
+	      AMBIENTCOLOR(self)[1] = 0.0;
+	      AMBIENTCOLOR(self)[2] = 0.0;
+	      AMBIENTCOLOR(self)[3] = 0.0;
+      
+#ifdef USE_OPENGL
+	      /*First, clear all lights.*/
+	      for (lupe= 0; lupe < MY_GL_MAX_LIGHTS; lupe++) {
+		glDisable(GL_LIGHT0 + lupe);
+	      }
+	
+	      glPushMatrix();
+#else
+	      /*First, clear all lights.*/
+	      for (lupe = LIGHT0; lupe <= DLIGHTCOUNT(self); lupe++)
+		lmbind(lupe, 0);
+	      DLIGHTCOUNT(self) = LIGHT0;
+	
+	      pushmatrix();
+#endif
+	    }
+
+	    if ( thisgob->has_transform ) ren_transform(thisgob->trans);
+
+	    if (thisgob->attr) {
+	      METHOD_RDY(ASSIST(self));
+	      (*(ASSIST(self)->push_attributes))( thisgob->attr );
+	    }
+      
+	    GLPROF(thisgob->name);
+	    /* There must be children to render, because if this was a primitive
+	     * this method would not be getting executed.
+	     */
+	    kidlist= thisgob->children;
+	    while (kidlist) {
+#ifdef USE_OPENGL
+	      glPushMatrix();
+#else
+	      pushmatrix();
+#endif
+	      METHOD_RDY(kidlist->gob);
+	      (*(kidlist->gob->traverselights_to_ren))
+		(self,(P_Transform *)0,(P_Attrib_List *)0);
+	      kidlist= kidlist->next;
+#ifdef USE_OPENGL
+	      glPopMatrix();
+#else
+	      popmatrix();
+#endif
+	    }
+
+	    if (thisgob->attr) {
+	      METHOD_RDY(ASSIST(self));
+	      (*(ASSIST(self)->pop_attributes))( thisgob->attr );
+	    }
+
+	    if (thistrans) {
+#ifdef USE_OPENGL
+	      glPopMatrix();
+	
+#else
+	      popmatrix();
+	
+	      /*Now the ambient lighting should be set...*/
+	      LM(self)[1] = AMBIENTCOLOR(self)[0];
+	      LM(self)[2] = AMBIENTCOLOR(self)[1];
+	      LM(self)[3] = AMBIENTCOLOR(self)[2];
+	
+	      lmdef(DEFLMODEL, 3, 9, LM(self));
+	      lmbind(LMODEL, 3);
+#endif
+	    }
+      
 	  }
 	}
-#endif
-#endif
-
-	if (MANAGE(self)) set_drawing_window(self);
-	get_drawing_area(self,&x_corner,&y_corner,&xsize,&ysize);
-	ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
-
-#ifdef USE_OPENGL
-	if (NPROCS(self)==0 || RANK(self)==0) {
-	  GLPROF("Clearing");
-	  glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
-		       BACKGROUND(self)[2], BACKGROUND(self)[3]);
-	  glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+      METHOD_OUT
 	}
-#if defined(WIREGL)
-	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
-#elif defined(CHROMIUM)
-	if (NPROCS(self)>0) glBarrierExecCR(MASTER_BARRIER);
-#endif
-	GLPROF("BuildingCoordTrans")
-	glPushMatrix();
-	gluLookAt(LOOKFROM(self).x,LOOKFROM(self).y,LOOKFROM(self).z,
-		  LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z, 
-		  LOOKUP(self).x, LOOKUP(self).y, LOOKUP(self).z);
-#else
-	viewport (0, xsize + 1, 0, ysize + 1);
-	lmcolor(LMC_COLOR);
-	back = BACKGROUND(self);
-	cval= ((int)((back[0]*255)+0.5))
-	  | (((int)((back[1]*255)+0.5)) << 8)
-	  | (((int)((back[2]*255)+0.5)) << 16)
-	  | (((int)((back[3]*255)+0.5)) << 24);
-	GLPROF("Clearing");
-	czclear(cval,getgconfig(GC_ZMIN));
-	pushmatrix();
-	lookat(LOOKFROM(self).x, LOOKFROM(self).y, LOOKFROM(self).z,
-	       LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z,
-	       LOOKANGLE(self));
-#endif
-      }
-      GLPROF(thisgob->name);
-      if ( thisgob->has_transform )
-	ren_transform(thisgob->trans);
-      
-      /* There must be children to render, because if this was a primitive
-       * this method would not be getting executed.
-       */
-      kidlist= thisgob->children;
-      while (kidlist) {
-#ifdef USE_OPENGL
-	glPushMatrix();
-#else
-	pushmatrix();
-#endif
 
-	METHOD_RDY(kidlist->gob);
-	(*(kidlist->gob->render_to_ren))(self, (P_Transform *)0,
-					 (P_Attrib_List *)0);
-	kidlist= kidlist->next;
-#ifdef USE_OPENGL
-	glPopMatrix();
-#else
-	popmatrix();
-#endif
-      }
-      
-      if (thisgob->attr) {
-	METHOD_RDY(ASSIST(self));
-	(*(ASSIST(self)->pop_attributes))( thisgob->attr );
-      }
-      
-      if (thisattrlist) {
-	METHOD_RDY(ASSIST(self));
-	(*(ASSIST(self)->pop_attributes))( thisattrlist );
-      }
-      
-      if (top_level_call) {
-#ifdef USE_OPENGL
-	glPopMatrix();
+  static void destroy_gob( P_Void_ptr primdata )
+    /* This routine destroys the renderer's data for the gob. */
+    {
+      P_Renderer *self= (P_Renderer *)po_this;
+      METHOD_IN
 
-#if defined(WIREGL)
-	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
-
-	if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0))
-	  wireGLSwapBuffers();
-#ifdef WIREGL_INSTRUMENT
-	else if (MANAGE(self) && (NPROCS(self)!=0 || RANK(self)!=0))
-	  wireGLInstrumentNextFrame();
-#endif
-
-#elif defined(CHROMIUM)
-	if (NPROCS(self)>0) glBarrierExecCR( MASTER_BARRIER );
-
-	/* The crserver only executes the SwapBuffers() for the 0th client.
-	 * No need to test for rank==0 as we used to do.
-	 */
-	if (MANAGE(self)) crSwapBuffersCR(0, 0);
-#else
-	if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
-#endif
-	glFlush();
-#else
-	popmatrix();
-	if (MANAGE(self)) swapbuffers();
-	gflush();
-#endif
-      }
-      
-    }
-  }
-  METHOD_OUT
-}
-
-static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
-                    P_Attrib_List *thisattrlist )
-/* This routine traverses a gob looking for lights. */
-{
-  P_Renderer *self= (P_Renderer *)po_this;
-  P_Gob *thisgob = (P_Gob *)primdata;
-  P_Gob_List *kidlist;
-  register short lupe;
-  METHOD_IN
-
-  if (RENDATA(self)->open) {
-    
-    if (primdata) {
-      
-      ger_debug("gl_ren_mthd: traverse_gob\n");
-      
-      /*First, check to see if this lighting gob has already been
-	defined...*/
-      /*If we're using the same lights as before don't bother to
-	re-render them.*/
-      
-      if (thisgob == DLIGHTBUFFER(self)) {
-	METHOD_OUT
-	  return;
-      }
-      /*Okay, *now* we need to render them. :)*/
-
-      if (thistrans) {
-	/* Top level call; initialize lighting state and traversal */
-
-	if (MANAGE(self)) set_drawing_window(self);
-
-	DLIGHTBUFFER(self) = thisgob;
-      
-	/*Clear the ambient lighting...*/
-	AMBIENTCOLOR(self)[0] = 0.0;
-	AMBIENTCOLOR(self)[1] = 0.0;
-	AMBIENTCOLOR(self)[2] = 0.0;
-	AMBIENTCOLOR(self)[3] = 0.0;
-      
-#ifdef USE_OPENGL
-	/*First, clear all lights.*/
-	for (lupe= 0; lupe < MY_GL_MAX_LIGHTS; lupe++) {
-	  glDisable(GL_LIGHT0 + lupe);
+	if (RENDATA(self)->open) {
+	  P_Gob *gob;
+	  gob= (P_Gob *)primdata;
+	  ger_debug("gl_ren_mthd: destroy_gob: destroying gob <%s>",gob->name);
 	}
-	
-	glPushMatrix();
-#else
-	/*First, clear all lights.*/
-	for (lupe = LIGHT0; lupe <= DLIGHTCOUNT(self); lupe++)
-	  lmbind(lupe, 0);
-	DLIGHTCOUNT(self) = LIGHT0;
-	
-	pushmatrix();
-#endif
-      }
+      METHOD_OUT
+	}
 
-      if ( thisgob->has_transform ) ren_transform(thisgob->trans);
-
-      if (thisgob->attr) {
-	METHOD_RDY(ASSIST(self));
-	(*(ASSIST(self)->push_attributes))( thisgob->attr );
-      }
-      
-      GLPROF(thisgob->name);
-      /* There must be children to render, because if this was a primitive
-       * this method would not be getting executed.
-       */
-      kidlist= thisgob->children;
-      while (kidlist) {
-#ifdef USE_OPENGL
-	glPushMatrix();
-#else
-	pushmatrix();
-#endif
-	METHOD_RDY(kidlist->gob);
-	(*(kidlist->gob->traverselights_to_ren))
-	  (self,(P_Transform *)0,(P_Attrib_List *)0);
-	kidlist= kidlist->next;
-#ifdef USE_OPENGL
-	glPopMatrix();
-#else
-	popmatrix();
-#endif
-      }
-
-      if (thisgob->attr) {
-	METHOD_RDY(ASSIST(self));
-	(*(ASSIST(self)->pop_attributes))( thisgob->attr );
-      }
-
-      if (thistrans) {
-#ifdef USE_OPENGL
-	glPopMatrix();
-	
-#else
-	popmatrix();
-	
-	/*Now the ambient lighting should be set...*/
-	LM(self)[1] = AMBIENTCOLOR(self)[0];
-	LM(self)[2] = AMBIENTCOLOR(self)[1];
-	LM(self)[3] = AMBIENTCOLOR(self)[2];
-	
-	lmdef(DEFLMODEL, 3, 9, LM(self));
-	lmbind(LMODEL, 3);
-#endif
-      }
-      
-    }
-  }
-  METHOD_OUT
-}
-
-static void destroy_gob( P_Void_ptr primdata )
-/* This routine destroys the renderer's data for the gob. */
-{
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
-
-  if (RENDATA(self)->open) {
-    P_Gob *gob;
-    gob= (P_Gob *)primdata;
-    ger_debug("gl_ren_mthd: destroy_gob: destroying gob <%s>",gob->name);
-  }
-  METHOD_OUT
-}
-
-static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
+  static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
     METHOD_IN
 
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
 
     ger_debug("gl_ren_mthd: def_polyline\n");
 
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-	ger_fatal("def_polyline: unable to allocate %d bytes!", 
-		  sizeof(gl_gob));
+      ger_fatal("def_polyline: unable to allocate %d bytes!", 
+		sizeof(gl_gob));
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
@@ -2382,23 +2382,23 @@ static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
     it->cvlist= cache_vlist(self, vertices);
 
     METHOD_OUT
-    return((P_Void_ptr)it);
-}
+      return((P_Void_ptr)it);
+  }
 
-static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
+  static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
     METHOD_IN
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
     
     ger_debug("gl_ren_mthd: def_polygon\n");
 
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-	ger_fatal("def_polygon: unable to allocate %d bytes!", sizeof(gl_gob));
+      ger_fatal("def_polygon: unable to allocate %d bytes!", sizeof(gl_gob));
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
@@ -2410,23 +2410,23 @@ static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
     it->cvlist= cache_vlist(self, vertices);
 
     METHOD_OUT
-    return((P_Void_ptr)it);
-}
+      return((P_Void_ptr)it);
+  }
 
-static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
+  static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
     METHOD_IN
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
     
     ger_debug("gl_ren_mthd: def_polymarker\n");
 
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-	ger_fatal("def_polymarker: unable to allocate %d bytes!", sizeof(gl_gob));
+      ger_fatal("def_polymarker: unable to allocate %d bytes!", sizeof(gl_gob));
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
@@ -2438,23 +2438,23 @@ static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
     it->cvlist= cache_vlist(self, vertices);
 
     METHOD_OUT
-    return((P_Void_ptr)it);
-}
+      return((P_Void_ptr)it);
+  }
 
-static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
+  static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
     METHOD_IN
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
     
     ger_debug("gl_ren_mthd: def_tristrip\n");
 
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-	ger_fatal("def_tristrip: unable to allocate %d bytes!", sizeof(gl_gob));
+      ger_fatal("def_tristrip: unable to allocate %d bytes!", sizeof(gl_gob));
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
@@ -2465,190 +2465,190 @@ static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
 #endif
     it->cvlist= cache_vlist(self, vertices);
     METHOD_OUT
-    return((P_Void_ptr)it);
-}
-
-static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
-  int color_flag= 0;
-  int value_flag= 0;
-  int value_flag_2= 0;
-  P_Renderer *self= (P_Renderer *)po_this;
-  P_Void_ptr result;
-  gl_gob *it;
-    
-  METHOD_IN
-
-  if (! (RENDATA(self)->open)) {
-      METHOD_OUT
-      return((P_Void_ptr)0);
+      return((P_Void_ptr)it);
   }
+
+  static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
+    int color_flag= 0;
+    int value_flag= 0;
+    int value_flag_2= 0;
+    P_Renderer *self= (P_Renderer *)po_this;
+    P_Void_ptr result;
+    gl_gob *it;
+    
+    METHOD_IN
+
+      if (! (RENDATA(self)->open)) {
+	METHOD_OUT
+	  return((P_Void_ptr)0);
+      }
   
-  ger_debug("gl_ren_mthd: def_bezier");
+    ger_debug("gl_ren_mthd: def_bezier");
 
 #ifdef AVOID_NURBS
-  METHOD_RDY(ASSIST(self));
-  result= (*(ASSIST(self)->def_bezier))(vertices);
-  METHOD_OUT
-  return( (P_Void_ptr)result );
+    METHOD_RDY(ASSIST(self));
+    result= (*(ASSIST(self)->def_bezier))(vertices);
+    METHOD_OUT
+      return( (P_Void_ptr)result );
 #else
 
-  if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
+    if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
       ger_fatal("def_bezier: unable to allocate %d bytes!", sizeof(gl_gob));
-  it->cvlist= NULL;
+    it->cvlist= NULL;
   
-  switch (vertices->type) {
-  case P3D_CVVVTX:
-    value_flag_2 = 0;
-    value_flag = 1;
-    color_flag = 0;
-    break;
-  case P3D_CVNVTX:
-    value_flag_2 = 0;
-    value_flag = 1;
-    color_flag = 0;
-    break;
-  case P3D_CVVTX:
-    value_flag_2 = 0;
-    value_flag = 1;
-    color_flag = 0;
-    break;
-  case P3D_CCNVTX:
-  case P3D_CCVTX:
-    value_flag_2 = 0;
-    value_flag = 0;
-    color_flag = 1;
-    break;
-  case P3D_CVTX:
-    value_flag_2 = 0;
-    color_flag = 0;
-    value_flag = 0;
-    break;
-  case P3D_CNVTX:
-    value_flag_2 = 0;
-    color_flag = 0;
-    value_flag = 0;
-    break;
-  }
+    switch (vertices->type) {
+    case P3D_CVVVTX:
+      value_flag_2 = 0;
+      value_flag = 1;
+      color_flag = 0;
+      break;
+    case P3D_CVNVTX:
+      value_flag_2 = 0;
+      value_flag = 1;
+      color_flag = 0;
+      break;
+    case P3D_CVVTX:
+      value_flag_2 = 0;
+      value_flag = 1;
+      color_flag = 0;
+      break;
+    case P3D_CCNVTX:
+    case P3D_CCVTX:
+      value_flag_2 = 0;
+      value_flag = 0;
+      color_flag = 1;
+      break;
+    case P3D_CVTX:
+      value_flag_2 = 0;
+      color_flag = 0;
+      value_flag = 0;
+      break;
+    case P3D_CNVTX:
+      value_flag_2 = 0;
+      color_flag = 0;
+      value_flag = 0;
+      break;
+    }
   
 #ifdef USE_OPENGL
-  {
-    GLfloat* knot_data= NULL;
-    GLfloat* runner;
-    GLfloat* crunner= NULL;
-    int buf_length;
-    float col4[4];
-    int i;
+    {
+      GLfloat* knot_data= NULL;
+      GLfloat* runner;
+      GLfloat* crunner= NULL;
+      int buf_length;
+      float col4[4];
+      int i;
 
-    if ((!color_flag) && (!value_flag) && (!value_flag_2)) 
-      buf_length= 3*16;
-    else buf_length= 3*16 + 4*16;
-    if ( !(knot_data= (GLfloat*)malloc(buf_length*sizeof(GLfloat))) ) 
-      ger_fatal("def_bezier: unable to allocate %d bytes!",
-		buf_length*sizeof(GLfloat));
+      if ((!color_flag) && (!value_flag) && (!value_flag_2)) 
+	buf_length= 3*16;
+      else buf_length= 3*16 + 4*16;
+      if ( !(knot_data= (GLfloat*)malloc(buf_length*sizeof(GLfloat))) ) 
+	ger_fatal("def_bezier: unable to allocate %d bytes!",
+		  buf_length*sizeof(GLfloat));
 
-    runner= knot_data;
-    if (color_flag || value_flag || value_flag_2) 
-      crunner= knot_data + 3*16;
-    METHOD_RDY(vertices);
-    for (i=0; i<16; i++) {
-      *runner++= (*vertices->x)(i);
-      *runner++= (*vertices->y)(i);
-      *runner++= (*vertices->z)(i);
-      if (color_flag) {
-	*crunner++ = (*vertices->r)(i);
-	*crunner++ = (*vertices->g)(i);
-	*crunner++ = (*vertices->b)(i);
-	*crunner++ = (*vertices->a)(i);
-      } else if (value_flag) {
-	get_rgb_color(self, col4, (*vertices->v)(i));
-	*crunner++ = (col4[0]);
-	*crunner++ = (col4[1]);
-	*crunner++ = (col4[2]);
-	*crunner++ = (col4[3]);
-      } else if (value_flag_2) {
-	get_rgb_color(self, col4, (*vertices->v2)(i));
-	*crunner++ = (col4[0]);
-	*crunner++ = (col4[1]);
-	*crunner++ = (col4[2]);
-	*crunner++ = (col4[3]);
+      runner= knot_data;
+      if (color_flag || value_flag || value_flag_2) 
+	crunner= knot_data + 3*16;
+      METHOD_RDY(vertices);
+      for (i=0; i<16; i++) {
+	*runner++= (*vertices->x)(i);
+	*runner++= (*vertices->y)(i);
+	*runner++= (*vertices->z)(i);
+	if (color_flag) {
+	  *crunner++ = (*vertices->r)(i);
+	  *crunner++ = (*vertices->g)(i);
+	  *crunner++ = (*vertices->b)(i);
+	  *crunner++ = (*vertices->a)(i);
+	} else if (value_flag) {
+	  get_rgb_color(self, col4, (*vertices->v)(i));
+	  *crunner++ = (col4[0]);
+	  *crunner++ = (col4[1]);
+	  *crunner++ = (col4[2]);
+	  *crunner++ = (col4[3]);
+	} else if (value_flag_2) {
+	  get_rgb_color(self, col4, (*vertices->v2)(i));
+	  *crunner++ = (col4[0]);
+	  *crunner++ = (col4[1]);
+	  *crunner++ = (col4[2]);
+	  *crunner++ = (col4[3]);
+	}
       }
-    }
 
-    it->obj_info.nurbs_obj.data= knot_data;
-    it->obj_info.nurbs_obj.ren= gluNewNurbsRenderer();
-    if (color_flag || value_flag || value_flag_2) {
-      it->obj_info.nurbs_obj.flags= 1;
+      it->obj_info.nurbs_obj.data= knot_data;
+      it->obj_info.nurbs_obj.ren= gluNewNurbsRenderer();
+      if (color_flag || value_flag || value_flag_2) {
+	it->obj_info.nurbs_obj.flags= 1;
+      }
+      else {
+	it->obj_info.nurbs_obj.flags= 0;
+      }
+      it->color_mode= 1;    
     }
-    else {
-      it->obj_info.nurbs_obj.flags= 0;
-    }
-    it->color_mode= 1;    
-  }
 #else
-  {
-    static double bez_knots[8]= {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
-    double coords[3*16];
-    double colors[4*16];
-    double *coordptr, *clrptr;
-    float col4[4];
-    int i;
+    {
+      static double bez_knots[8]= {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
+      double coords[3*16];
+      double colors[4*16];
+      double *coordptr, *clrptr;
+      float col4[4];
+      int i;
 
-    coordptr= coords;
-    clrptr= colors;
-    METHOD_RDY(vertices);
-    for (i=0; i<16; i++) {
-      *coordptr++= (*vertices->x)(i);
-      *coordptr++= (*vertices->y)(i);
-      *coordptr++= (*vertices->z)(i);
-      if (color_flag) {
-	*clrptr++ = (*vertices->r)(i);
-	*clrptr++ = (*vertices->g)(i);
-	*clrptr++ = (*vertices->b)(i);
-	*clrptr++ = (*vertices->a)(i);
-      } else if (value_flag) {
-	get_rgb_color(self, col4, (*vertices->v)(i));
-	*clrptr++ = (col4[0]);
-	*clrptr++ = (col4[1]);
-	*clrptr++ = (col4[2]);
-	*clrptr++ = (col4[3]);
-      } else if (value_flag_2) {
-	get_rgb_color(self, col4, (*vertices->v2)(i));
-	*clrptr++ = (col4[0]);
-	*clrptr++ = (col4[1]);
-	*clrptr++ = (col4[2]);
-	*clrptr++ = (col4[3]);
+      coordptr= coords;
+      clrptr= colors;
+      METHOD_RDY(vertices);
+      for (i=0; i<16; i++) {
+	*coordptr++= (*vertices->x)(i);
+	*coordptr++= (*vertices->y)(i);
+	*coordptr++= (*vertices->z)(i);
+	if (color_flag) {
+	  *clrptr++ = (*vertices->r)(i);
+	  *clrptr++ = (*vertices->g)(i);
+	  *clrptr++ = (*vertices->b)(i);
+	  *clrptr++ = (*vertices->a)(i);
+	} else if (value_flag) {
+	  get_rgb_color(self, col4, (*vertices->v)(i));
+	  *clrptr++ = (col4[0]);
+	  *clrptr++ = (col4[1]);
+	  *clrptr++ = (col4[2]);
+	  *clrptr++ = (col4[3]);
+	} else if (value_flag_2) {
+	  get_rgb_color(self, col4, (*vertices->v2)(i));
+	  *clrptr++ = (col4[0]);
+	  *clrptr++ = (col4[1]);
+	  *clrptr++ = (col4[2]);
+	  *clrptr++ = (col4[3]);
+	}
       }
-    }
   
-    makeobj( it->obj_info.obj=genobj() );
-    /*As of now, we're defining the object*/
-    bgnsurface();
+      makeobj( it->obj_info.obj=genobj() );
+      /*As of now, we're defining the object*/
+      bgnsurface();
     
-    if (color_flag || value_flag || value_flag_2) {
-      it->color_mode= LMC_AD;
+      if (color_flag || value_flag || value_flag_2) {
+	it->color_mode= LMC_AD;
+	nurbssurface( 8, bez_knots, 8, bez_knots,
+		      4*sizeof(double), 4*4*sizeof(double), colors,
+		      4, 4, N_C4D );
+      }
+      else it->color_mode= LMC_COLOR;
+    
       nurbssurface( 8, bez_knots, 8, bez_knots,
-		    4*sizeof(double), 4*4*sizeof(double), colors,
-		    4, 4, N_C4D );
+		    3*sizeof(double), 4*3*sizeof(double), coords,
+		    4, 4, N_V3D );
+    
+      endsurface();
+      closeobj();
     }
-    else it->color_mode= LMC_COLOR;
-    
-    nurbssurface( 8, bez_knots, 8, bez_knots,
-	       3*sizeof(double), 4*3*sizeof(double), coords,
-		  4, 4, N_V3D );
-    
-    endsurface();
-    closeobj();
-  }
 #endif
 
-  METHOD_OUT
+    METHOD_OUT
 	
-  return((P_Void_ptr)it);
+      return((P_Void_ptr)it);
 #endif
-}
+  }
 
-static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
-			   int *facet_lengths, int nfacets) {
+  static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
+			     int *facet_lengths, int nfacets) {
     P_Renderer *self= (P_Renderer *)po_this;
     gl_gob *it;
     int lupe, loope;
@@ -2659,27 +2659,27 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     float col4[4], nor[3];
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
 
     ger_debug("gl_ren_mthd: def_mesh");
     if (vertices->length < 3) {
-	ger_error("gl_ren_mthd: def_mesh: %d isn't enough vertices for a mesh!", vertices->length);
-	METHOD_OUT
+      ger_error("gl_ren_mthd: def_mesh: %d isn't enough vertices for a mesh!", vertices->length);
+      METHOD_OUT
 	return((P_Void_ptr)0);
     }
 
     if (nfacets<1) {
-	ger_error("gl_ren_mthd: def_mesh: %d isn't enough facets for a mesh!", nfacets);
-	METHOD_OUT
+      ger_error("gl_ren_mthd: def_mesh: %d isn't enough facets for a mesh!", nfacets);
+      METHOD_OUT
 	return((P_Void_ptr)0);
     }
 
     if ( !(it= (gl_gob *)malloc(sizeof(gl_gob))))
-	ger_fatal("gl_ren_mthd: def_mesh: unable to allocate %d bytes!"
-		  , sizeof(gl_gob));
+      ger_fatal("gl_ren_mthd: def_mesh: unable to allocate %d bytes!"
+		, sizeof(gl_gob));
     it->cvlist= NULL;
     
 #ifdef USE_GL_OBJ
@@ -2706,170 +2706,170 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     case P3D_CVVTX:  /*Fixed*/
     case P3D_CVVVTX:
 #ifdef USE_OPENGL
-        it->color_mode = 0;
+      it->color_mode = 0;
 #else
-	it->color_mode = LMC_COLOR;
+      it->color_mode = LMC_COLOR;
 #endif
-	break;
+      break;
     }
 
     METHOD_RDY(vertices);
     for (loope=0; loope < nfacets; loope++) {
 #ifdef USE_OPENGL
-	if (*facet_lengths == 3)
-	    glBegin(GL_TRIANGLES);
-	else if (*facet_lengths == 4)
-	    glBegin(GL_QUADS);
-	else
-	    glBegin(GL_POLYGON);
+      if (*facet_lengths == 3)
+	glBegin(GL_TRIANGLES);
+      else if (*facet_lengths == 4)
+	glBegin(GL_QUADS);
+      else
+	glBegin(GL_POLYGON);
 #else
-	if (*facet_lengths == 3)
-	    bgntmesh();
-	else
-	    bgnpolygon();
+      if (*facet_lengths == 3)
+	bgntmesh();
+      else
+	bgnpolygon();
 #endif
-	switch(vertices->type) {
-	case P3D_CVTX:
-	    /*Coordinate vertex list: feed and draw.*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+      switch(vertices->type) {
+      case P3D_CVTX:
+	/*Coordinate vertex list: feed and draw.*/
+	for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glVertex3fv(vtx);
+	  glVertex3fv(vtx);
 #else
-		v3f(vtx);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	case P3D_CCVTX:
-	    /*Coordinate/color vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-		col4[0] = (*vertices->r)(*indices);
-		col4[1] = (*vertices->g)(*indices);
-		col4[2] = (*vertices->b)(*indices);
-		col4[3] = (*vertices->a)(*indices);
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+	}
+	break;
+      case P3D_CCVTX:
+	/*Coordinate/color vertex list*/
+	for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	  col4[0] = (*vertices->r)(*indices);
+	  col4[1] = (*vertices->g)(*indices);
+	  col4[2] = (*vertices->b)(*indices);
+	  col4[3] = (*vertices->a)(*indices);
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glColor4fv(col4);
-		glVertex3fv(vtx);
+	  glColor4fv(col4);
+	  glVertex3fv(vtx);
 #else
-		c4f(col4);
-		v3f(vtx);
+	  c4f(col4);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	case P3D_CCNVTX:
-	    /*Coordinate/color/normal vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-		nor[0] = (*vertices->nx)(*indices);
-		nor[1] = (*vertices->ny)(*indices);
-		nor[2] = (*vertices->nz)(*indices);
-		col4[0] = (*vertices->r)(*indices);
-		col4[1] = (*vertices->g)(*indices);
-		col4[2] = (*vertices->b)(*indices);
-		col4[3] = (*vertices->a)(*indices);
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+	}
+	break;
+      case P3D_CCNVTX:
+	/*Coordinate/color/normal vertex list*/
+	for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	  nor[0] = (*vertices->nx)(*indices);
+	  nor[1] = (*vertices->ny)(*indices);
+	  nor[2] = (*vertices->nz)(*indices);
+	  col4[0] = (*vertices->r)(*indices);
+	  col4[1] = (*vertices->g)(*indices);
+	  col4[2] = (*vertices->b)(*indices);
+	  col4[3] = (*vertices->a)(*indices);
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glNormal3fv(nor);
-		glColor4fv(col4);
-		glVertex3fv(vtx);
+	  glNormal3fv(nor);
+	  glColor4fv(col4);
+	  glVertex3fv(vtx);
 #else
-		n3f(nor);
-		c4f(col4);
-		v3f(vtx);
+	  n3f(nor);
+	  c4f(col4);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	case P3D_CNVTX:
-	    /*Coordinate/normal vertex list*/
-	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++) {
-		nor[0] = (*vertices->nx)(*indices);
-		nor[1] = (*vertices->ny)(*indices);
-		nor[2] = (*vertices->nz)(*indices);
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+	}
+	break;
+      case P3D_CNVTX:
+	/*Coordinate/normal vertex list*/
+	for (lupe=0;lupe < *facet_lengths; lupe++, indices++) {
+	  nor[0] = (*vertices->nx)(*indices);
+	  nor[1] = (*vertices->ny)(*indices);
+	  nor[2] = (*vertices->nz)(*indices);
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glNormal3fv(nor);
-		glVertex3fv(vtx);
+	  glNormal3fv(nor);
+	  glVertex3fv(vtx);
 #else
-		n3f(nor);
-		v3f(vtx);
+	  n3f(nor);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	case P3D_CVVTX:
-	    /*Coordinate/value vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-		get_rgb_color(self, col4,(*vertices->v)(*indices));
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+	}
+	break;
+      case P3D_CVVTX:
+	/*Coordinate/value vertex list*/
+	for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	  get_rgb_color(self, col4,(*vertices->v)(*indices));
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glColor4fv(col4);
-		glVertex3fv(vtx);
+	  glColor4fv(col4);
+	  glVertex3fv(vtx);
 #else
-		c4f(col4);
-		v3f(vtx);
+	  c4f(col4);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	case P3D_CVNVTX:
-	    /*Coordinate/normal/value vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-		nor[0] = (*vertices->nx)(*indices);
-		nor[1] = (*vertices->ny)(*indices);
-		nor[2] = (*vertices->nz)(*indices);
-		get_rgb_color(self, col4,(*vertices->v)(*indices));
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+	}
+	break;
+      case P3D_CVNVTX:
+	/*Coordinate/normal/value vertex list*/
+	for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	  nor[0] = (*vertices->nx)(*indices);
+	  nor[1] = (*vertices->ny)(*indices);
+	  nor[2] = (*vertices->nz)(*indices);
+	  get_rgb_color(self, col4,(*vertices->v)(*indices));
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glNormal3fv(nor);
-		glColor4fv(col4);
-		glVertex3fv(vtx);
+	  glNormal3fv(nor);
+	  glColor4fv(col4);
+	  glVertex3fv(vtx);
 #else
-		n3f(nor);
-		c4f(col4);
-		v3f(vtx);
+	  n3f(nor);
+	  c4f(col4);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	case P3D_CVVVTX:
-	    /*Coordinate/value/value vertex list*/
-	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
-		get_rgb_color(self, col4,(*vertices->v)(*indices));
-		vtx[0] = (*vertices->x)(*indices);
-		vtx[1] = (*vertices->y)(*indices);
-		vtx[2] = (*vertices->z)(*indices);
+	}
+	break;
+      case P3D_CVVVTX:
+	/*Coordinate/value/value vertex list*/
+	for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	  get_rgb_color(self, col4,(*vertices->v)(*indices));
+	  vtx[0] = (*vertices->x)(*indices);
+	  vtx[1] = (*vertices->y)(*indices);
+	  vtx[2] = (*vertices->z)(*indices);
 #ifdef USE_OPENGL
-		glColor4fv(col4);
-		glVertex3fv(vtx);
+	  glColor4fv(col4);
+	  glVertex3fv(vtx);
 #else
-		c4f(col4);
-		v3f(vtx);
+	  c4f(col4);
+	  v3f(vtx);
 #endif
-	    }
-	    break;
-	default:
-	    printf("gl_ren_mthd: def_mesh: null vertex type.\n");
-	    break;
-	} /*switch(vertices->type)*/
+	}
+	break;
+      default:
+	printf("gl_ren_mthd: def_mesh: null vertex type.\n");
+	break;
+      } /*switch(vertices->type)*/
 	
 #ifdef USE_OPENGL
-	glEnd();
+      glEnd();
 #else
-	if (*facet_lengths == 3)
-	    endtmesh();
-	else
-	    endpolygon();
+      if (*facet_lengths == 3)
+	endtmesh();
+      else
+	endpolygon();
 #endif
-	facet_lengths++;
+      facet_lengths++;
     }
     
 #ifdef USE_OPENGL
@@ -2935,35 +2935,35 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
 #endif /* USE_GL_OBJ */
     
     METHOD_OUT
-    return( (P_Void_ptr)it );
-}
+      return( (P_Void_ptr)it );
+  }
 
 #ifdef USE_OPENGL
-static int pick_free_light(P_Renderer* self)
-{
-  int i;
-  for (i=0; i<MY_GL_MAX_LIGHTS; i++) {
-    if (!LIGHT_IN_USE(self)[i]) {
-      LIGHT_IN_USE(self)[i]++;
-      return i;
+  static int pick_free_light(P_Renderer* self)
+    {
+      int i;
+      for (i=0; i<MY_GL_MAX_LIGHTS; i++) {
+	if (!LIGHT_IN_USE(self)[i]) {
+	  LIGHT_IN_USE(self)[i]++;
+	  return i;
+	}
+      }
+      ger_error("gl_ren_mthd: ran out of lights!\n");
+      LIGHT_IN_USE(self)[MY_GL_MAX_LIGHTS-1]++;
+      return MY_GL_MAX_LIGHTS-1;
     }
-  }
-  ger_error("gl_ren_mthd: ran out of lights!\n");
-  LIGHT_IN_USE(self)[MY_GL_MAX_LIGHTS-1]++;
-  return MY_GL_MAX_LIGHTS-1;
-}
 #endif
 
-static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
+  static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
     
     P_Renderer *self = (P_Renderer *)po_this;
 
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return 0;
-    }
+	  return 0;
+      }
     
     ger_debug("gl_ren_mthd: def_light\n");
     
@@ -2985,7 +2985,7 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
       light->light_num= pick_free_light(self);
 
       METHOD_OUT
-      return((P_Void_ptr)light);
+	return((P_Void_ptr)light);
     }
 #else
     {
@@ -3008,22 +3008,22 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
       lmdef(DEFLIGHT, light_num, 10, the_light);
       
       METHOD_OUT
-      return ((P_Void_ptr)light_num++);
+	return ((P_Void_ptr)light_num++);
     }
 
 #endif
-}
+  }
 
-void traverse_light(P_Void_ptr it, P_Transform *foo,
-			      P_Attrib_List *bar) {
+  void traverse_light(P_Void_ptr it, P_Transform *foo,
+		      P_Attrib_List *bar) {
 
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 
     ger_debug("gl_ren_mthd: traverse_light");
     
@@ -3044,28 +3044,28 @@ void traverse_light(P_Void_ptr it, P_Transform *foo,
     /*Okay... let's figure out how many lights are in use...
      and quit if we have too many...*/
     if ((LIGHT0 + MAXLIGHTS) == DLIGHTCOUNT(self))
-	return;
+      return;
 
     lmbind(DLIGHTCOUNT(self)++, (short)it);
 #endif
     
     METHOD_OUT
-}
+      }
 
-void ren_light(P_Void_ptr it, P_Transform *foo,
-	       P_Attrib_List *bar) {
+  void ren_light(P_Void_ptr it, P_Transform *foo,
+		 P_Attrib_List *bar) {
 
     /*Hmm... let's just do nothing, for now...*/
-}
+  }
 
-void destroy_light(P_Void_ptr it) {
+  void destroy_light(P_Void_ptr it) {
     
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 	
     ger_debug("gl_ren_mthd: destroy_light\n");
 
@@ -3082,16 +3082,16 @@ void destroy_light(P_Void_ptr it) {
 #endif
     
     METHOD_OUT
-}
+      }
 
-static P_Void_ptr def_ambient(char *name, P_Color *color) {
+  static P_Void_ptr def_ambient(char *name, P_Color *color) {
     
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
 
     ger_debug("gl_ren_mthd: def_ambient\n");
 
@@ -3111,7 +3111,7 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
       light->light_num= pick_free_light(self);
 
       METHOD_OUT
-      return((P_Void_ptr)light);
+	return((P_Void_ptr)light);
     }
 
 #else
@@ -3119,21 +3119,21 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
     /*Let's just put this somewhere we can use it later.*/
 
     METHOD_OUT
-    return ((P_Void_ptr)color);
+      return ((P_Void_ptr)color);
 #endif
-}
+  }
 
-void traverse_ambient(P_Void_ptr it, P_Transform *foo,
-			      P_Attrib_List *bar) {
+  void traverse_ambient(P_Void_ptr it, P_Transform *foo,
+			P_Attrib_List *bar) {
 
     P_Color *color = (P_Color *)it;
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 
     ger_debug("gl_ren_mthd: ren_ambient");
 
@@ -3159,23 +3159,23 @@ void traverse_ambient(P_Void_ptr it, P_Transform *foo,
 #endif        
     
     METHOD_OUT
-}
+      }
 
-void ren_ambient(P_Void_ptr it, P_Transform *foo,
-	       P_Attrib_List *bar) {
+  void ren_ambient(P_Void_ptr it, P_Transform *foo,
+		   P_Attrib_List *bar) {
 
     /*Hmm... let's just do nothing, for now...*/
-}
+  }
 
-void destroy_ambient(P_Void_ptr it) {
+  void destroy_ambient(P_Void_ptr it) {
     
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 	
     ger_debug("gl_ren_mthd: destroy_ambient\n");
 
@@ -3191,49 +3191,49 @@ void destroy_ambient(P_Void_ptr it) {
 #endif
 
     METHOD_OUT
-}
+      }
 
-static void hold_gob(P_Void_ptr gob) {
+  static void hold_gob(P_Void_ptr gob) {
     /*This doesn't do anything*/
 
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 
     
     ger_debug("gl_ren_mthd: hold_gob\n");
 
     METHOD_OUT
-}
+      }
 
-static void unhold_gob(P_Void_ptr gob) {
+  static void unhold_gob(P_Void_ptr gob) {
     /*This doesn't do anything*/
 
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 	
     ger_debug("gl_ren_mthd: unhold_gob\n");
     METHOD_OUT
-}
+      }
 
-static P_Void_ptr def_camera(struct P_Camera_struct *thecamera) {
+  static P_Void_ptr def_camera(struct P_Camera_struct *thecamera) {
     
     P_Renderer *self = (P_Renderer *)po_this;
     METHOD_IN
 	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return((P_Void_ptr)0);
-    }
+	  return((P_Void_ptr)0);
+      }
 	
 
     ger_debug("gl_ren_mthd: def_camera\n");
@@ -3242,10 +3242,10 @@ static P_Void_ptr def_camera(struct P_Camera_struct *thecamera) {
       routine.*/
     
     METHOD_OUT
-    return ((P_Void_ptr)thecamera);
-}
+      return ((P_Void_ptr)thecamera);
+  }
 
-static void set_camera(P_Void_ptr thecamera) {
+  static void set_camera(P_Void_ptr thecamera) {
 
     P_Renderer *self = (P_Renderer *)po_this;
     P_Camera *camera = (P_Camera *)thecamera;
@@ -3255,10 +3255,10 @@ static void set_camera(P_Void_ptr thecamera) {
     short short_result;
 
     METHOD_IN	
-    if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
-    }
+	  return;
+      }
 	
     ger_debug("gl_ren_mthd: set_camera\n");
 
@@ -3307,17 +3307,17 @@ static void set_camera(P_Void_ptr thecamera) {
     if (norm) {
       result = 10.0*RadtoDeg*asin((double)(theCross.y/norm));	
       if ( !(((looking.z <= 0.0) && (theCross.x >= 0.0))
-	  || ((looking.z >= 0.0) && (theCross.x <= 0.0))) ) {
+	     || ((looking.z >= 0.0) && (theCross.x <= 0.0))) ) {
 	result= 1800 - result;
       }
       short_result = (short)(result+0.5);
       LOOKANGLE(self) = short_result;
 
-	/*Don't ask me how I came up with the angle.*/
-	/*It's quite messy.*/
+      /*Don't ask me how I came up with the angle.*/
+      /*It's quite messy.*/
     }
     else
-	ger_error("gl_ren_mthd: set_camera: up vector is parallel to \
+      ger_error("gl_ren_mthd: set_camera: up vector is parallel to \
                    viewing vector; setting up angle to %d.", LOOKANGLE(self));
 
     BACKGROUND(self)[0] = camera->background.r;
@@ -3326,119 +3326,119 @@ static void set_camera(P_Void_ptr thecamera) {
     BACKGROUND(self)[3] = 1.0;
 
     METHOD_OUT
-}    
+      }    
     
-static void destroy_camera(P_Void_ptr thecamera) {
+  static void destroy_camera(P_Void_ptr thecamera) {
     ger_debug("gl_ren_mthd: destroy_camera\n");
 
     /*I don't have anything to deallocate... :)*/
-}    
+  }    
     
-static P_Void_ptr def_text(char *name, char *tstring, P_Point *location,
-		    P_Vector *u, P_Vector *v) {
-  P_Renderer *self= (P_Renderer *)po_this;
-  P_Void_ptr result;
-  METHOD_IN
+  static P_Void_ptr def_text(char *name, char *tstring, P_Point *location,
+			     P_Vector *u, P_Vector *v) {
+    P_Renderer *self= (P_Renderer *)po_this;
+    P_Void_ptr result;
+    METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: def_text");
-    METHOD_RDY(ASSIST(self));
-    result= (*(ASSIST(self)->def_text))( tstring, location, u, v );
+      if (RENDATA(self)->open) {
+	ger_debug("gl_ren_mthd: def_text");
+	METHOD_RDY(ASSIST(self));
+	result= (*(ASSIST(self)->def_text))( tstring, location, u, v );
+	METHOD_OUT
+	  return( (P_Void_ptr)result );
+      }
     METHOD_OUT
-    return( (P_Void_ptr)result );
+      return((P_Void_ptr)0);
   }
-  METHOD_OUT
-  return((P_Void_ptr)0);
-}
 
-static void ren_text( P_Void_ptr rendata, P_Transform *trans,
-                         P_Attrib_List *attr )
-/* This method renders a text string */
-{
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
+  static void ren_text( P_Void_ptr rendata, P_Transform *trans,
+			P_Attrib_List *attr )
+    /* This method renders a text string */
+    {
+      P_Renderer *self= (P_Renderer *)po_this;
+      METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: ren_text");
-    METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->ren_text))(rendata, trans, attr);
-  }
-  METHOD_OUT
-}
+	if (RENDATA(self)->open) {
+	  ger_debug("gl_ren_mthd: ren_text");
+	  METHOD_RDY(ASSIST(self));
+	  (*(ASSIST(self)->ren_text))(rendata, trans, attr);
+	}
+      METHOD_OUT
+	}
 
-static void destroy_text( P_Void_ptr rendata )
-/* This method destroys a text string */
-{
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
+  static void destroy_text( P_Void_ptr rendata )
+    /* This method destroys a text string */
+    {
+      P_Renderer *self= (P_Renderer *)po_this;
+      METHOD_IN
 
-  if (RENDATA(self)->open) {
-    ger_debug("gl_ren_mthd: destroy_text");
+	if (RENDATA(self)->open) {
+	  ger_debug("gl_ren_mthd: destroy_text");
 
-    METHOD_RDY(ASSIST(self));
-    (*(ASSIST(self)->destroy_text))(rendata);
+	  METHOD_RDY(ASSIST(self));
+	  (*(ASSIST(self)->destroy_text))(rendata);
 
-  }
-  METHOD_OUT
-}
+	}
+      METHOD_OUT
+	}
 
-static void ren_print() {
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
+  static void ren_print() {
+    P_Renderer *self= (P_Renderer *)po_this;
+    METHOD_IN
 
-  ger_debug("gl_ren_mthd: ren_print");
-  if ( RENDATA(self)->open ) {
-    if (AUTO(self)) {
-      ind_write("RENDERER: GL generator '%s', does not own window, open",
-		self->name); 
+      ger_debug("gl_ren_mthd: ren_print");
+    if ( RENDATA(self)->open ) {
+      if (AUTO(self)) {
+	ind_write("RENDERER: GL generator '%s', does not own window, open",
+		  self->name); 
+      }
+      else {
+	ind_write("RENDERER: GL generator '%s', owns window, open",
+		  self->name); 
+      }
     }
     else {
-      ind_write("RENDERER: GL generator '%s', owns window, open",
-		self->name); 
+      if (AUTO(self)) {
+	ind_write("RENDERER: GL generator '%s', does not own window, closed",
+		  self->name); 
+      }
+      else {
+	ind_write("RENDERER: GL generator '%s', owns window, closed",
+		  self->name); 
+      }
     }
-  }
-  else {
-    if (AUTO(self)) {
-      ind_write("RENDERER: GL generator '%s', does not own window, closed",
-		self->name); 
-    }
-    else {
-      ind_write("RENDERER: GL generator '%s', owns window, closed",
-		self->name); 
-    }
-  }
-  ind_eol();
+    ind_eol();
 
-  METHOD_OUT
-}
+    METHOD_OUT
+      }
 
-static void ren_open() {
+  static void ren_open() {
     /*opening the renderer.*/
     
     P_Renderer *self=(P_Renderer *)po_this;
     
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: ren_open\n");
+      ger_debug("gl_ren_mthd: ren_open\n");
     RENDATA(self)->open=1;
     
     METHOD_OUT
-}
+      }
 
-static void ren_close() {
+  static void ren_close() {
     P_Renderer *self= (P_Renderer *)po_this;
     METHOD_IN
-    ger_debug("gl_ren_mthd: ren_close");
+      ger_debug("gl_ren_mthd: ren_close");
     RENDATA(self)->open= 0;
     METHOD_OUT
-}
+      }
 
-static void ren_destroy() {
+  static void ren_destroy() {
     /*Kill everything. Everything.*/
     P_Renderer *self=(P_Renderer *)po_this;
     METHOD_IN
 
-    ger_debug("gl_ren_mthd: ren_destroy\n");
+      ger_debug("gl_ren_mthd: ren_destroy\n");
 
     if (MANAGE(self)) release_drawing_window(self);
 
@@ -3452,408 +3452,412 @@ static void ren_destroy() {
     free( (P_Void_ptr)LM(self) );
 #if defined(WIREGL)
     if (NPROCS(self)>0) glBarrierDestroy(BARRIER(self));
+#elif define(CHROMIUM)
+    if (NPROCS(self)>0) glBarrierDestroy( MASTER_BARRIER );
 #endif
 #endif
     free ((P_Void_ptr)self);
     METHOD_DESTROYED
-}
+      }
 
-static P_Void_ptr def_cmap(char *name, double min, double max, 
-			   void(*mapfun)(float *, float *, float *, float *, float *)) {
-  P_Renderer *self= (P_Renderer *)po_this;
-  P_Renderer_Cmap *thismap;
-  METHOD_IN
+  static P_Void_ptr def_cmap(char *name, double min, double max, 
+			     void(*mapfun)(float *, float *, float *, float *, float *)) {
+    P_Renderer *self= (P_Renderer *)po_this;
+    P_Renderer_Cmap *thismap;
+    METHOD_IN
   
-  if (! (RENDATA(self)->open)) {
+      if (! (RENDATA(self)->open)) {
+	METHOD_OUT
+	  return((P_Void_ptr)0);
+      }
+
+    ger_debug("gl_ren_mthd: def_cmap");
+
+    if (max == min) {
+      ger_error("gl_ren_mthd: def_cmap: max equals min (val is %f)", max );
+      METHOD_OUT;
+      return( (P_Void_ptr)0 );
+    }
+
+    if ( RENDATA(self)->open ) {
+      if ( !(thismap= (P_Renderer_Cmap *)malloc(sizeof(P_Renderer_Cmap))) )
+	ger_fatal( "gl_ren_mthd: def_cmap: unable to allocate %d bytes!",
+		   sizeof(P_Renderer_Cmap) );
+
+      strncpy(thismap->name, name, MAXSYMBOLLENGTH-1);
+      (thismap->name)[MAXSYMBOLLENGTH-1]= '\0';
+      thismap->min= min;
+      thismap->max= max;
+      thismap->mapfun= mapfun;
       METHOD_OUT
-      return((P_Void_ptr)0);
-  }
-
-  ger_debug("gl_ren_mthd: def_cmap");
-
-  if (max == min) {
-    ger_error("gl_ren_mthd: def_cmap: max equals min (val is %f)", max );
-    METHOD_OUT;
-    return( (P_Void_ptr)0 );
-  }
-
-  if ( RENDATA(self)->open ) {
-    if ( !(thismap= (P_Renderer_Cmap *)malloc(sizeof(P_Renderer_Cmap))) )
-      ger_fatal( "gl_ren_mthd: def_cmap: unable to allocate %d bytes!",
-                sizeof(P_Renderer_Cmap) );
-
-    strncpy(thismap->name, name, MAXSYMBOLLENGTH-1);
-    (thismap->name)[MAXSYMBOLLENGTH-1]= '\0';
-    thismap->min= min;
-    thismap->max= max;
-    thismap->mapfun= mapfun;
+	return( (P_Void_ptr)thismap );
+    }
     METHOD_OUT
-    return( (P_Void_ptr)thismap );
+      return( (P_Void_ptr)0 );
   }
-  METHOD_OUT
-  return( (P_Void_ptr)0 );
-}
 
-static void install_cmap(P_Void_ptr mapdata) {
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
+  static void install_cmap(P_Void_ptr mapdata) {
+    P_Renderer *self= (P_Renderer *)po_this;
+    METHOD_IN
 
-  ger_debug("gl_ren_mthd: install_cmap");
-  if ( RENDATA(self)->open ) {
-    if (mapdata) CUR_MAP(self)= (P_Renderer_Cmap *)mapdata;
-    else ger_error("gl_ren_mthd: install_cmap: got null color map data.");
-  }
-  METHOD_OUT
-}
+      ger_debug("gl_ren_mthd: install_cmap");
+    if ( RENDATA(self)->open ) {
+      if (mapdata) CUR_MAP(self)= (P_Renderer_Cmap *)mapdata;
+      else ger_error("gl_ren_mthd: install_cmap: got null color map data.");
+    }
+    METHOD_OUT
+      }
 
-static void destroy_cmap(P_Void_ptr mapdata) {
-  /* This has to be implemented without reference to "self", like a
-   * class static method, because it may be called to destroy data
-   * after the specific renderer which created it has been destroyed.
+  static void destroy_cmap(P_Void_ptr mapdata) {
+    /* This has to be implemented without reference to "self", like a
+     * class static method, because it may be called to destroy data
+     * after the specific renderer which created it has been destroyed.
    */
-  ger_debug("gl_ren_mthd: destroy_cmap");
-  if ( mapdata ) free( mapdata );
-}
+    ger_debug("gl_ren_mthd: destroy_cmap");
+    if ( mapdata ) free( mapdata );
+  }
 
-static P_Void_ptr def_gob(char *name, struct P_Gob_struct *gob) {
+  static P_Void_ptr def_gob(char *name, struct P_Gob_struct *gob) {
     
     P_Renderer *self = (P_Renderer *)po_this;
 
     METHOD_IN
 	
-    if (RENDATA(self)->open) {
+      if (RENDATA(self)->open) {
 	ger_debug("gl_ren_mthd: def_gob");
 	METHOD_OUT
-	return( (P_Void_ptr)gob ); /* Stash the gob where we can get it later */
-    }
+	  return( (P_Void_ptr)gob ); /* Stash the gob where we can get it later */
+      }
     METHOD_OUT
-    return((P_Void_ptr)0);
-}
+      return((P_Void_ptr)0);
+  }
 
-static char* getTrimmedValue(char* string)
-{
-  /* This returns the value of a pair like 'name="foo"', using the same storage as
-   * the input string.  Surrounding quotes or double quotes are removed if present.
+  static char* getTrimmedValue(char* string)
+    {
+      /* This returns the value of a pair like 'name="foo"', using the same storage as
+       * the input string.  Surrounding quotes or double quotes are removed if present.
    */
-  char* result= strchr(string,'=');
-  char* end;
+      char* result= strchr(string,'=');
+      char* end;
 
-  if (!result) return NULL;
+      if (!result) return NULL;
 
-  result++; /* skip to following char */
-  if (*result == '\'' || *result == '"') result++;
-  end= result;
-  while (*end) end++;
-  if ((end>result) && (*(end-1)=='\'' || *(end-1)=='"')) end--;
-  *end= '\0';
-  return result;
-}
+      result++; /* skip to following char */
+      if (*result == '\'' || *result == '"') result++;
+      end= result;
+      while (*end) end++;
+      if ((end>result) && (*(end-1)=='\'' || *(end-1)=='"')) end--;
+      *end= '\0';
+      return result;
+    }
 
-P_Renderer *po_create_gl_renderer( char *device, char *datastr )
-/* This routine creates a ptr-generating renderer object */
-{
-  P_Renderer *self;
-  int length,i;
-  P_Renderer_data *rdata;
-  long xsize, ysize;
-  register short lupe;
-  int x,y,result; /*For prefposition*/
-  unsigned int width, height; /*For prefsize*/
-  char *name, *size;
-  int nprocs_set= 0, rank_set= 0;
+  P_Renderer *po_create_gl_renderer( char *device, char *datastr )
+    /* This routine creates a ptr-generating renderer object */
+    {
+      P_Renderer *self;
+      int length,i;
+      P_Renderer_data *rdata;
+      long xsize, ysize;
+      register short lupe;
+      int x,y,result; /*For prefposition*/
+      unsigned int width, height; /*For prefsize*/
+      char *name, *size;
+      int nprocs_set= 0, rank_set= 0;
   
-  ger_debug("po_create_gl_renderer: device= <%s>, datastr= <%s>",
-	    device, datastr);
+      ger_debug("po_create_gl_renderer: device= <%s>, datastr= <%s>",
+		device, datastr);
 
-  /* Create memory for the renderer */
-  if ( !(self= (P_Renderer *)malloc(sizeof(P_Renderer))) )
-    ger_fatal("po_create_gl_renderer: unable to allocate %d bytes!",
-              sizeof(P_Renderer) );
+      /* Create memory for the renderer */
+      if ( !(self= (P_Renderer *)malloc(sizeof(P_Renderer))) )
+	ger_fatal("po_create_gl_renderer: unable to allocate %d bytes!",
+		  sizeof(P_Renderer) );
 #ifdef USE_OPENGL
-  sprintf(self->name,"ogl%d",ren_seq_num++);
+      sprintf(self->name,"ogl%d",ren_seq_num++);
 #else
-  sprintf(self->name,"igl%d",ren_seq_num++);
+      sprintf(self->name,"igl%d",ren_seq_num++);
 #endif
 
-  /* Create memory for object data */
-  if ( !(rdata= (P_Renderer_data *)malloc(sizeof(P_Renderer_data))) )
-    ger_fatal("po_create_gl_renderer: unable to allocate %d bytes!",
-              sizeof(P_Renderer_data) );
-  self->object_data= (P_Void_ptr)rdata;
+      /* Create memory for object data */
+      if ( !(rdata= (P_Renderer_data *)malloc(sizeof(P_Renderer_data))) )
+	ger_fatal("po_create_gl_renderer: unable to allocate %d bytes!",
+		  sizeof(P_Renderer_data) );
+      self->object_data= (P_Void_ptr)rdata;
 
-  /* Set some flags */
-  if (strstr (device,"nomanage") != NULL) {
-    MANAGE(self)= 0;
-  }
-  else MANAGE(self)= 1;
-  if (strstr (device, "widget=") != NULL) {
-    AUTO (self) = 1;
-  }
-  else AUTO(self)= 0;
+      /* Set some flags */
+      if (strstr (device,"nomanage") != NULL) {
+	MANAGE(self)= 0;
+      }
+      else MANAGE(self)= 1;
+      if (strstr (device, "widget=") != NULL) {
+	AUTO (self) = 1;
+      }
+      else AUTO(self)= 0;
 
-  /*parse the datastr string*/
-  name= strdup("p3d-gl");
-  size = NULL;
-  NPROCS(self)= 0;
-  RANK(self)= 0;
+      /*parse the datastr string*/
+      name= strdup("p3d-gl");
+      size = NULL;
+      NPROCS(self)= 0;
+      RANK(self)= 0;
   
-  if (datastr) {
-    char* size_start= NULL;
-    char* name_start= NULL;
-    char* nprocs_start= NULL;
-    char* rank_start= NULL;
-    char* thisTok;
-    char* where;
-    char* dupDatastr= strdup(datastr);
-    int firstPass= 1;
-    while ( thisTok= strtok_r( (firstPass ? dupDatastr : NULL), ",", &where ) ) {
-      if (!strncasecmp(thisTok,"name=",strlen("name="))
-	  || !strncasecmp(thisTok,"title=",strlen("title="))) {
-	if (name) free(name);
-	name= strdup( getTrimmedValue(thisTok) );
+      if (datastr) {
+	char* size_start= NULL;
+	char* name_start= NULL;
+	char* nprocs_start= NULL;
+	char* rank_start= NULL;
+	char* thisTok;
+	char* where;
+	char* dupDatastr= strdup(datastr);
+	int firstPass= 1;
+	while ( thisTok= strtok_r( (firstPass ? dupDatastr : NULL), ",", &where ) ) {
+	  if (!strncasecmp(thisTok,"name=",strlen("name="))
+	      || !strncasecmp(thisTok,"title=",strlen("title="))) {
+	    if (name) free(name);
+	    name= strdup( getTrimmedValue(thisTok) );
+	  }
+	  else if (!strncasecmp(thisTok,"size=",strlen("size="))
+		   || !strncasecmp(thisTok,"geometry=",strlen("geometry="))) {
+	    size= strdup(getTrimmedValue(thisTok));
+	  }
+	  else if (!strncasecmp(thisTok,"nprocs=",strlen("nprocs="))) {
+	    NPROCS(self)= atoi(getTrimmedValue(thisTok));
+	    nprocs_set= 1;
+	  }
+	  else if (!strncasecmp(thisTok,"rank=",strlen("rank="))) {
+	    RANK(self)= atoi(getTrimmedValue(thisTok));
+	    rank_set= 1;
+	  }
+	  else ger_error("po_create_gl_renderer: unrecognized data string element <%s>!\n",thisTok);
+	  firstPass= 0;
+	}
+	free(dupDatastr);
       }
-      else if (!strncasecmp(thisTok,"size=",strlen("size="))
-	  || !strncasecmp(thisTok,"geometry=",strlen("geometry="))) {
-	size= strdup(getTrimmedValue(thisTok));
-      }
-      else if (!strncasecmp(thisTok,"nprocs=",strlen("nprocs="))) {
-	NPROCS(self)= atoi(getTrimmedValue(thisTok));
-	nprocs_set= 1;
-      }
-      else if (!strncasecmp(thisTok,"rank=",strlen("rank="))) {
-	RANK(self)= atoi(getTrimmedValue(thisTok));
-	rank_set= 1;
-      }
-      else ger_error("po_create_gl_renderer: unrecognized data string element <%s>!\n",thisTok);
-      firstPass= 0;
-    }
-    free(dupDatastr);
-  }
   
-  NAME(self) = name;
-  RENDATA(self)->initialized= 0;
-  init_gl_structure(self);
+      NAME(self) = name;
+      RENDATA(self)->initialized= 0;
+      init_gl_structure(self);
   
-  if (nprocs_set && !rank_set) 
-    ger_fatal("po_create_gl_renderer: if nprocs is specified, rank must be also.\n");
-  if (rank_set && !nprocs_set) 
-    ger_fatal("po_create_gl_renderer: if rank is specified, nprocs must be also.\n");
+      if (nprocs_set && !rank_set) 
+	ger_fatal("po_create_gl_renderer: if nprocs is specified, rank must be also.\n");
+      if (rank_set && !nprocs_set) 
+	ger_fatal("po_create_gl_renderer: if rank is specified, nprocs must be also.\n");
 
-  /*start by parsing the size into a geometry spec...*/
+      /*start by parsing the size into a geometry spec...*/
   
-  if (MANAGE(self)) {
-    if (AUTO (self)) {
-      char *ptr;
+      if (MANAGE(self)) {
+	if (AUTO (self)) {
+	  char *ptr;
       
-      device = strstr (device, "widget=");
-      ptr = strchr (device, '=');
-      WIDGET(self) = (Widget) atoi (ptr + 1);
-      XDISPLAY(self)= XtDisplay(WIDGET(self));
-      XWINDOW(self)= XtWindow(WIDGET(self)); /* we will actually use a subwindow */
+	  device = strstr (device, "widget=");
+	  ptr = strchr (device, '=');
+	  WIDGET(self) = (Widget) atoi (ptr + 1);
+	  XDISPLAY(self)= XtDisplay(WIDGET(self));
+	  XWINDOW(self)= XtWindow(WIDGET(self)); /* we will actually use a subwindow */
 #ifdef never
-      XSynchronize(XDISPLAY(self),True);
+	  XSynchronize(XDISPLAY(self),True);
 #endif
-      attach_drawing_window(self);
+	  attach_drawing_window(self);
+	}
+	else {
+	  create_drawing_window(self, size);
+	}
+      }
+
+      if (size) free(size);
+
+      if (MANAGE(self)) set_drawing_window(self);
+      return (self);
     }
-    else {
-      create_drawing_window(self, size);
-    }
-  }
 
-  if (size) free(size);
-
-  if (MANAGE(self)) set_drawing_window(self);
-  return (self);
-}
-
-/* complete structure initalization (note: no actual gl calls here) */
-void init_gl_structure (P_Renderer *self)
-{
-     register short lupe;
+  /* complete structure initalization (note: no actual gl calls here) */
+  void init_gl_structure (P_Renderer *self)
+    {
+      register short lupe;
 
 #ifdef USE_OPENGL
-     SPHERE(self)= NULL;
-     SPHERE_DEFINED(self)= 0;
-     CYLINDER(self)= NULL;
-     CYLINDER_DEFINED(self)= 0;
-     for (lupe=0; lupe<MY_GL_MAX_LIGHTS; lupe++)
-       LIGHT_IN_USE(self)[lupe]= 0;
-     if (NPROCS(self)>0) {
-       BARRIER(self)= ren_seq_num;
-     }
-     else {
-       BARRIER(self)= 0;
-     }
+      SPHERE(self)= NULL;
+      SPHERE_DEFINED(self)= 0;
+      CYLINDER(self)= NULL;
+      CYLINDER_DEFINED(self)= 0;
+      for (lupe=0; lupe<MY_GL_MAX_LIGHTS; lupe++)
+	LIGHT_IN_USE(self)[lupe]= 0;
+      if (NPROCS(self)>0) {
+	BARRIER(self)= ren_seq_num;
+      }
+      else {
+	BARRIER(self)= 0;
+      }
 #endif
 
-     BACKGROUND(self) = (float *)(malloc(4*sizeof(float)));
-     AMBIENTCOLOR(self) = (float *)(malloc(4*sizeof(float)));
-     ASSIST(self)= po_create_assist(self);
-     BACKCULLSYMBOL(self)= create_symbol("backcull");
-     TEXTHEIGHTSYMBOL(self)= create_symbol("text-height");
-     COLORSYMBOL(self)= create_symbol("color");
-     MATERIALSYMBOL(self)= create_symbol("material");
-     CURMATERIAL(self) = -1;
+      BACKGROUND(self) = (float *)(malloc(4*sizeof(float)));
+      AMBIENTCOLOR(self) = (float *)(malloc(4*sizeof(float)));
+      ASSIST(self)= po_create_assist(self);
+      BACKCULLSYMBOL(self)= create_symbol("backcull");
+      TEXTHEIGHTSYMBOL(self)= create_symbol("text-height");
+      COLORSYMBOL(self)= create_symbol("color");
+      MATERIALSYMBOL(self)= create_symbol("material");
+      CURMATERIAL(self) = -1;
 #ifdef USE_OPENGL
-     MAXDLIGHTCOUNT(self) = 0; /* not used under OpenGL */
-     DLIGHTCOUNT(self) = 0; /* not used under OpenGL */
+      MAXDLIGHTCOUNT(self) = 0; /* not used under OpenGL */
+      DLIGHTCOUNT(self) = 0; /* not used under OpenGL */
 #else
-     MAXDLIGHTCOUNT(self) = MAXLIGHTS; /* not used under OpenGL */
-     DLIGHTCOUNT(self) = LIGHT0; /* not used under OpenGL */
+      MAXDLIGHTCOUNT(self) = MAXLIGHTS; /* not used under OpenGL */
+      DLIGHTCOUNT(self) = LIGHT0; /* not used under OpenGL */
 #endif
-     DLIGHTBUFFER(self) = NULL;
+      DLIGHTBUFFER(self) = NULL;
 
-     /* Fill in all the methods */
-     self->def_sphere= def_sphere;
-     self->ren_sphere= ren_sphere;
-     self->destroy_sphere= destroy_sphere;
+      /* Fill in all the methods */
+      self->def_sphere= def_sphere;
+      self->ren_sphere= ren_sphere;
+      self->destroy_sphere= destroy_sphere;
 
-     self->def_cylinder= def_cylinder;
-     self->ren_cylinder= ren_cylinder;
-     self->destroy_cylinder= destroy_cylinder;
+      self->def_cylinder= def_cylinder;
+      self->ren_cylinder= ren_cylinder;
+      self->destroy_cylinder= destroy_cylinder;
 
-     self->def_torus= def_torus;
-     self->ren_torus= ren_torus;
-     self->destroy_torus= destroy_torus;
+      self->def_torus= def_torus;
+      self->ren_torus= ren_torus;
+      self->destroy_torus= destroy_torus;
 
-     self->def_polymarker= def_polymarker;
-     self->ren_polymarker= ren_polymarker;
-     self->destroy_polymarker= destroy_object;
+      self->def_polymarker= def_polymarker;
+      self->ren_polymarker= ren_polymarker;
+      self->destroy_polymarker= destroy_object;
 
-     self->def_polyline= def_polyline;
-     self->ren_polyline= ren_polyline;
-     self->destroy_polyline= destroy_object;
+      self->def_polyline= def_polyline;
+      self->ren_polyline= ren_polyline;
+      self->destroy_polyline= destroy_object;
 
-     self->def_polygon= def_polygon;
-     self->ren_polygon= ren_polygon;
-     self->destroy_polygon= destroy_object;
+      self->def_polygon= def_polygon;
+      self->ren_polygon= ren_polygon;
+      self->destroy_polygon= destroy_object;
 
-     self->def_tristrip= def_tristrip;
-     self->ren_tristrip= ren_tristrip;
-     self->destroy_tristrip= destroy_object;
+      self->def_tristrip= def_tristrip;
+      self->ren_tristrip= ren_tristrip;
+      self->destroy_tristrip= destroy_object;
 
-     self->def_mesh= def_mesh;
-     self->ren_mesh= ren_mesh;
-     self->destroy_mesh= destroy_mesh;
+      self->def_mesh= def_mesh;
+      self->ren_mesh= ren_mesh;
+      self->destroy_mesh= destroy_mesh;
 
-     self->def_bezier= def_bezier;
-     self->ren_bezier= ren_bezier;
-     self->destroy_bezier= destroy_bezier;
+      self->def_bezier= def_bezier;
+      self->ren_bezier= ren_bezier;
+      self->destroy_bezier= destroy_bezier;
 
-     self->def_text= def_text;
-     self->ren_text= ren_text;
-     self->destroy_text= destroy_text;
+      self->def_text= def_text;
+      self->ren_text= ren_text;
+      self->destroy_text= destroy_text;
 
-     self->def_light= def_light;
-     self->ren_light= ren_light;
-     self->light_traverse_light= traverse_light;
-     self->destroy_light= destroy_light;
+      self->def_light= def_light;
+      self->ren_light= ren_light;
+      self->light_traverse_light= traverse_light;
+      self->destroy_light= destroy_light;
 
-     self->def_ambient= def_ambient;
-     self->ren_ambient= ren_ambient;
-     self->light_traverse_ambient= traverse_ambient;
-     self->destroy_ambient= destroy_ambient;
+      self->def_ambient= def_ambient;
+      self->ren_ambient= ren_ambient;
+      self->light_traverse_ambient= traverse_ambient;
+      self->destroy_ambient= destroy_ambient;
 
-     self->def_gob= def_gob;
-     self->ren_gob= ren_gob;
-     self->light_traverse_gob= traverse_gob;
-     self->hold_gob= hold_gob;
-     self->unhold_gob= unhold_gob;
-     self->destroy_gob= destroy_gob;
+      self->def_gob= def_gob;
+      self->ren_gob= ren_gob;
+      self->light_traverse_gob= traverse_gob;
+      self->hold_gob= hold_gob;
+      self->unhold_gob= unhold_gob;
+      self->destroy_gob= destroy_gob;
 
-     self->print= ren_print;
-     self->open= ren_open;
-     self->close= ren_close;
-     self->destroy_self= ren_destroy;
+      self->print= ren_print;
+      self->open= ren_open;
+      self->close= ren_close;
+      self->destroy_self= ren_destroy;
 
-     self->def_camera= def_camera;
-     self->set_camera= set_camera;
-     self->destroy_camera= destroy_camera;
+      self->def_camera= def_camera;
+      self->set_camera= set_camera;
+      self->destroy_camera= destroy_camera;
 
-     self->def_cmap= def_cmap;
-     self->install_cmap= install_cmap;
-     self->destroy_cmap= destroy_cmap;
-}
+      self->def_cmap= def_cmap;
+      self->install_cmap= install_cmap;
+      self->destroy_cmap= destroy_cmap;
+    }
 
-/* gl calls necessary to complete drawp3d initalization
+  /* gl calls necessary to complete drawp3d initalization
      after the widget is realized or the window is up
 */
-void init_gl_gl (P_Renderer *self)
-{
-     unsigned int xsize, ysize;
-     int xcorner, ycorner;
+  void init_gl_gl (P_Renderer *self)
+    {
+      unsigned int xsize, ysize;
+      int xcorner, ycorner;
 
 #ifdef USE_OPENGL
-     glMatrixMode(GL_MODELVIEW);
+      glMatrixMode(GL_MODELVIEW);
 
-     glClearColor(0.0,0.0,0.0,0.0); 
+      glClearColor(0.0,0.0,0.0,0.0); 
 
 #if defined(WIREGL)
-	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
+      if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
 
-	if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0))
-	  wireGLSwapBuffers();
+      if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0))
+	wireGLSwapBuffers();
 #ifdef WIREGL_INSTRUMENT
-	else if (MANAGE(self) && (NPROCS(self)!=0 || RANK(self)!=0))
-	  wireGLInstrumentNextFrame();
+      else if (MANAGE(self) && (NPROCS(self)!=0 || RANK(self)!=0))
+	wireGLInstrumentNextFrame();
 #endif
 #elif defined(CHROMIUM)
-     if (MANAGE(self)) crSwapBuffersCR(0, 0);
+      if (NPROCS(self)>0) glBarrierExec( MASTER_BARRIER );
+      if (MANAGE(self)) crSwapBuffersCR(0, 0);
 #else
-     if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
+      if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
 #endif
-     glEnable(GL_DEPTH_TEST);
-     glShadeModel(GL_SMOOTH);
-     glEnable(GL_LIGHTING);
-     glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
-     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-     glEnable(GL_COLOR_MATERIAL);
-     glEnable(GL_AUTO_NORMAL);
-     glEnable(GL_NORMALIZE);
+      glEnable(GL_DEPTH_TEST);
+      glShadeModel(GL_SMOOTH);
+      glEnable(GL_LIGHTING);
+      glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
+      glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+      glEnable(GL_COLOR_MATERIAL);
+      glEnable(GL_AUTO_NORMAL);
+      glEnable(GL_NORMALIZE);
 
-     hastransparent= 0;
+      hastransparent= 0;
 
 #else
-     mmode (MVIEWING);
-     if (MANAGE(self) && !AUTO(self)) {
-       doublebuffer ();
-       RGBmode ();
-       gconfig();
-     }
-     subpixel (TRUE);
-     cpack (0);
-     clear ();
-     if (MANAGE(self)) swapbuffers ();
-     zbuffer (TRUE);
-     lmcolor (LMC_COLOR);
+      mmode (MVIEWING);
+      if (MANAGE(self) && !AUTO(self)) {
+	doublebuffer ();
+	RGBmode ();
+	gconfig();
+      }
+      subpixel (TRUE);
+      cpack (0);
+      clear ();
+      if (MANAGE(self)) swapbuffers ();
+      zbuffer (TRUE);
+      lmcolor (LMC_COLOR);
 
-     glcompat (GLC_ZRANGEMAP, 0);
-     glcompat (GLC_OLDPOLYGON, 1);
+      glcompat (GLC_ZRANGEMAP, 0);
+      glcompat (GLC_OLDPOLYGON, 1);
 
-     lsetdepth (getgdesc (GD_ZMAX), getgdesc (GD_ZMIN));
-     zfunction (ZF_GREATER);
-     shademodel (GOURAUD);
+      lsetdepth (getgdesc (GD_ZMAX), getgdesc (GD_ZMIN));
+      zfunction (ZF_GREATER);
+      shademodel (GOURAUD);
 
-     if (hastransparent = getgdesc (GD_BLEND))
-          blendfunction (BF_SA, BF_MSA);
-     else
-          defpattern (GREYPATTERN, 16, greyPattern);
+      if (hastransparent = getgdesc (GD_BLEND))
+	blendfunction (BF_SA, BF_MSA);
+      else
+	defpattern (GREYPATTERN, 16, greyPattern);
 
 #ifndef AVOID_NURBS
-     sphmode (SPH_TESS, SPH_BILIN);
-     sphmode (SPH_DEPTH, 4);
+      sphmode (SPH_TESS, SPH_BILIN);
+      sphmode (SPH_DEPTH, 4);
 #endif
 
-     LM(self) = (float *)(malloc(9*sizeof(float))); /* not used under OpenGL */
-     for (lupe = 0; lupe < 9; lupe++)
-          LM(self)[lupe] = initiallm[lupe];
+      LM(self) = (float *)(malloc(9*sizeof(float))); /* not used under OpenGL */
+      for (lupe = 0; lupe < 9; lupe++)
+	LM(self)[lupe] = initiallm[lupe];
 
 #endif
 
-     get_drawing_area(self,&xcorner,&ycorner,&xsize,&ysize);
-     ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
+      get_drawing_area(self,&xcorner,&ycorner,&xsize,&ysize);
+      ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
 
-     /*Predefine all of our materials...*/
-     define_materials(self);
-}
+      /*Predefine all of our materials...*/
+      define_materials(self);
+    }
 
+  
