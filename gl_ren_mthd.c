@@ -85,16 +85,17 @@ FILE* debugFile= NULL;
  * want these...
  */
 
-#define LOAD( x ) x##CR = (x##Proc) crGetProcAddress( #x )
+#define LOAD( x ) gl##x##CR = (cr##x##Proc) crGetProcAddress( "cr"#x )
+#define LOAD2( x ) gl##x##CR = (gl##x##CRProc) crGetProcAddress( "gl"#x )
 
-static crCreateContextProc crCreateContextCR= NULL;
-static crMakeCurrentProc   crMakeCurrentCR= NULL;
-static crSwapBuffersProc   crSwapBuffersCR= NULL;
-static crDestroyContextProc crDestroyContextCR= NULL;
+static crCreateContextProc  glCreateContextCR  = NULL;
+static crMakeCurrentProc    glMakeCurrentCR    = NULL;
+static crSwapBuffersProc    glSwapBuffersCR    = NULL;
+static crDestroyContextProc glDestroyContextCR = NULL;
 
-static glBarrierCreateProc glBarrierCreateCR= NULL;
-static glBarrierExecProc   glBarrierExecCR=NULL;
-static glBarrierDestroyProc glBarrierDestroyCR=NULL;
+static glBarrierCreateCRProc  glBarrierCreateCR  = NULL;
+static glBarrierExecCRProc    glBarrierExecCR    = NULL;
+static glBarrierDestroyCRProc glBarrierDestroyCR = NULL;
 
 #endif
 
@@ -284,7 +285,7 @@ static void set_drawing_window( P_Renderer* self )
 #if defined(WIREGL)
   wireGLMakeCurrent();
 #elif defined(CHROMIUM)
-  crMakeCurrentCR(0, CRCONTEXT(self));
+  glMakeCurrentCR(0, CRCONTEXT(self));
 #else
   if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) != True)
     ger_error("Error: set_drawing_window: unable to set context!\n");
@@ -321,12 +322,12 @@ static void attach_drawing_window( P_Renderer* self )
   crSetRank( RANK(self) );
 
   CRCONTEXT(self) = 
-    crCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
+    glCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
   if (CRCONTEXT(self) <= 0) {
-    crError("crCreateContextCR() call failed!\n");
+    crError("glCreateContextCR() call failed!\n");
     return;
   }
-  crMakeCurrentCR(0, CRCONTEXT(self));
+  glMakeCurrentCR(0, CRCONTEXT(self));
   
   if (NPROCS(self)>0) {
     glBarrierCreateCR(BARRIER(self), NPROCS(self));
@@ -421,12 +422,12 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
   XWINDOW(self)= 0;
   crSetRank( RANK(self) );
 
-  CRCONTEXT(self) = crCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
+  CRCONTEXT(self) = glCreateContextCR(0, CR_RGB_BIT | CR_DEPTH_BIT | CR_DOUBLE_BIT);
   if (CRCONTEXT(self) <= 0) {
-    crError("crCreateContextCR() call failed!\n");
+    crError("glCreateContextCR() call failed!\n");
     return;
   }
-  crMakeCurrentCR( 0, CRCONTEXT(self) );
+  glMakeCurrentCR( 0, CRCONTEXT(self) );
   
   if (NPROCS(self)>0) {
     glBarrierCreateCR(BARRIER(self), NPROCS(self));
@@ -533,7 +534,7 @@ static void release_drawing_window( P_Renderer* self )
   XDestroyWindow(XDISPLAY(self),XWINDOW(self));
 #endif
 #ifdef CHROMIUM
-  crDestroyContextCR(CRCONTEXT(self));
+  glDestroyContextCR(CRCONTEXT(self));
   CRCONTEXT(self)= -1;
 #endif
 #else
@@ -2260,7 +2261,7 @@ static void destroy_object(P_Void_ptr the_thing) {
 	  /* The crserver only executes the SwapBuffers() for the 0th client.
 	   * No need to test for rank==0 as we used to do.
 	   */
-	  if (MANAGE(self)) crSwapBuffersCR(0, 0);
+	  if (MANAGE(self)) glSwapBuffersCR(0, 0);
 #else
 	  if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
 #endif
@@ -3865,13 +3866,13 @@ static void destroy_object(P_Void_ptr the_thing) {
 #ifdef USE_OPENGL
 
 #ifdef CHROMIUM
-  if (!crCreateContextCR) LOAD( crCreateContext );
-  if (!crDestroyContextCR) LOAD( crDestroyContext );
-  if (!crMakeCurrentCR) LOAD( crMakeCurrent );
-  if (!crSwapBuffersCR) LOAD( crSwapBuffers );
-  if (!glBarrierCreateCR) LOAD( glBarrierCreate );
-  if (!glBarrierExecCR) LOAD( glBarrierExec );
-  if (!glBarrierDestroyCR) LOAD( glBarrierDestroy );
+  if (!glCreateContextCR) LOAD( CreateContext );
+  if (!glDestroyContextCR) LOAD( DestroyContext );
+  if (!glMakeCurrentCR) LOAD( MakeCurrent );
+  if (!glSwapBuffersCR) LOAD( SwapBuffers );
+  if (!glBarrierCreateCR) LOAD2( BarrierCreate );
+  if (!glBarrierExecCR) LOAD2( BarrierExec );
+  if (!glBarrierDestroyCR) LOAD2( BarrierDestroy );
 #endif /* CHROMIUM */
 
       SPHERE(self)= NULL;
@@ -4001,7 +4002,7 @@ static void destroy_object(P_Void_ptr the_thing) {
 #endif
 #elif defined(CHROMIUM)
       if (NPROCS(self)>0) glBarrierExecCR( BARRIER(self) );
-      if (MANAGE(self)) crSwapBuffersCR(0, 0);
+      if (MANAGE(self)) glSwapBuffersCR(0, 0);
 #else
       if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
 #endif
