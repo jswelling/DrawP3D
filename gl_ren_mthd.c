@@ -1226,7 +1226,7 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
 	
     if (! (RENDATA(self)->open)) {
 	METHOD_OUT
-	return;
+	return 0;
     }
     
     ger_debug("gl_ren_mthd: def_light\n");
@@ -1850,7 +1850,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   self->def_light= def_light;
   self->ren_light= ren_light;
   self->light_traverse_light= traverse_light;
-  self->destroy_light= destroy_object;
+  self->destroy_light= destroy_light;
 
   self->def_ambient= def_ambient;
   self->ren_ambient= ren_ambient;
