@@ -1823,12 +1823,14 @@ static char* generate_fname()
     /* Find the file extension */
     int has_extension= P3D_FALSE;
     int ext_offset= 0;
+    int ext_len= 0;
     
     runner= NAME(self)+len-1; /* end of string */
     while ((runner > NAME(self)) && (*runner != '/')) {
       if (*runner=='.') {
 	has_extension= P3D_TRUE;
 	ext_offset= runner-NAME(self);
+	ext_len= len - ext_offset;
 	break;
       }
       runner--;
@@ -1836,7 +1838,7 @@ static char* generate_fname()
     if (has_extension) {
       strncpy(result, NAME(self), ext_offset+1);
       sprintf(result+ext_offset+1,"%.4d",FILENUM(self));
-      strcat(result, NAME(self)+ext_offset);
+      strncat(result, NAME(self)+ext_offset,ext_len);
     }
     else {
       strcpy(result, NAME(self));
