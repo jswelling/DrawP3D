@@ -61,7 +61,7 @@ install:
 
 tarfile: $(CSOURCE) $(CXXSOURCE) $(FSOURCE) $(HFILES) $(DOCFILES) \
 		$(MISCFILES) 
-	if test ${PWD} == ${TOP} ; then rm /usr/tmp/drawp3d.tar ; fi
+	if test ${PWD} == ${TOP} ; then rm -f /usr/tmp/drawp3d.tar ; fi
 	tar -cvf /usr/tmp/drawp3d.tar $^
 	-for i in dummy $(SUBMAKES) ; do \
 	if test $$i != dummy ; then (tar -rvf /usr/tmp/drawp3d.tar $$i ); fi ; done
