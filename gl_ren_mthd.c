@@ -349,6 +349,7 @@ static void get_drawing_area( P_Renderer* self,
 
 static void set_drawing_window( P_Renderer* self )
 {
+  if (!MANAGE(self)) return;
 #ifdef USE_OPENGL
 #if defined(WIREGL)
   wireGLMakeCurrent();
@@ -441,7 +442,8 @@ static void attach_drawing_window( P_Renderer* self )
     swa.colormap = cmap;
     swa.border_pixel = 0;
     swa.event_mask = StructureNotifyMask;
-    XWINDOW(self)= XCreateWindow(XDISPLAY(self), XWINDOW(self), 0, 0, width, height,
+    XWINDOW(self)= XCreateWindow(XDISPLAY(self), XWINDOW(self), 
+				 0, 0, width, height,
 				 0, vi->depth, InputOutput, vi->visual,
 				 CWBorderPixel|CWColormap|CWEventMask, &swa);
     if (!XWINDOW(self)) {
@@ -587,6 +589,7 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
 static void release_drawing_window( P_Renderer* self )
 {
   /* Destroys the window if appropriate */
+  if (!MANAGE(self)) return;
 #ifdef USE_OPENGL
   if (chromium_in_use()) {
     glDestroyContextCR(CRCONTEXT(self));
@@ -1501,7 +1504,7 @@ static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
 	glDrawElements(GL_TRIANGLES, 3*nfacets, GL_UNSIGNED_INT, indices);
 	break;
       case MESH_QUAD:
-	glDrawElements(GL_TRIANGLES, 4*nfacets, GL_UNSIGNED_INT, indices);
+	glDrawElements(GL_QUADS, 4*nfacets, GL_UNSIGNED_INT, indices);
 	break;
       case MESH_STRIP:
 	for (loope=0; loope < nfacets; loope++) {
@@ -2165,7 +2168,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
   METHOD_IN
 	
   ger_debug("gl_ren_mthd: ren_gob\n");
-  
+
   if (RENDATA(self)->open) {
     
     if (!(RENDATA(self)->initialized)) {
@@ -2360,6 +2363,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
       
     }
   }
+
   METHOD_OUT
 }
 
@@ -3885,7 +3889,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   }
   else MANAGE(self)= 1;
   if (strstr (device, "widget=") != NULL) {
-    AUTO (self) = 1;
+    AUTO(self) = 1;
   }
   else AUTO(self)= 0;
 
@@ -3937,8 +3941,6 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   if (rank_set && !nprocs_set) 
     ger_fatal("po_create_gl_renderer: if rank is specified, nprocs must be also.\n");
 
-  /*start by parsing the size into a geometry spec...*/
-  
   if (MANAGE(self)) {
     if (AUTO (self)) {
       char *ptr;

@@ -108,6 +108,6 @@ $B/gl_ren_tester: $O/gl_ren_tester.o $L/libdrawp3d.a
 $B/fl_gl_interface: $O/fl_gl_interface.o $O/fl_gl_stuff.o $L/libdrawp3d.a
 	@echo "Linking " $@
 	@$(CXX) -o $@ ${LFLAGS} $O/fl_gl_interface.o $O/fl_gl_stuff.o \
-		-L$L -ldrawp3d -lfltk $(LIBS)
+		-L$L -ldrawp3d -lfltk -lfltk_gl $(LIBS)
 
 include ${TOP}/rules.mk
