@@ -24,6 +24,7 @@ This module provides renderer methods for the IRIS gl renderer
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <X11/Intrinsic.h>
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
@@ -232,14 +233,14 @@ static void get_drawing_area( P_Renderer* self,
 static void set_drawing_window( P_Renderer* self )
 {
 #ifdef USE_OPENGL
+
 #ifdef WIREGL
-
   wireGLMakeCurrent();
-
 #else
   if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) != True)
      ger_error("Error: set_drawing_window: unable to set context!\n");
 #endif
+
 #else
   if (!AUTO (self)) {
     winset(WINDOW(self));
@@ -263,9 +264,12 @@ static void attach_drawing_window( P_Renderer* self )
 
 #ifdef WIREGL
 
+  XWINDOW(self)= 0;
+
   wireGLCreateContext();
   GLXCONTEXT(self)= NULL;
-  XWINDOW(self)= 0;
+  wireGLMakeCurrent();
+  if (NPROCS(self)>0) glBarrierCreate(BARRIER(self), NPROCS(self));
     
 #else
 
@@ -342,9 +346,12 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
 
 #ifdef WIREGL
   
-  wireGLCreateContext();
-  GLXCONTEXT(self)= NULL;
   XWINDOW(self)= 0;
+
+  wireGLCreateContext();
+  wireGLMakeCurrent();
+  GLXCONTEXT(self)= NULL;
+  if (NPROCS(self)>0) glBarrierCreate(BARRIER(self), NPROCS(self));
 
 #else
   {
@@ -2058,16 +2065,16 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 	ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
 
 #ifdef USE_OPENGL
-#ifdef never
-	glViewport(x_corner,  y_corner, xsize, ysize); 
+	if (NPROCS(self)==0 || RANK(self)==0) {
+	  GLPROF("Clearing");
+	  glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
+		       BACKGROUND(self)[2], BACKGROUND(self)[3]);
+	  glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+	}
+#ifdef WIREGL
+	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
 #endif
-#ifdef never
-	glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_LIST_BIT );
-#endif
-	GLPROF("Clearing");
-	glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
-		     BACKGROUND(self)[2], BACKGROUND(self)[3]);
-	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+	GLPROF("BuildingCoordTrans")
 	glPushMatrix();
 	gluLookAt(LOOKFROM(self).x,LOOKFROM(self).y,LOOKFROM(self).z,
 		  LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z, 
@@ -2127,12 +2134,10 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
       if (top_level_call) {
 #ifdef USE_OPENGL
 	glPopMatrix();
-#ifdef never
-	glPopAttrib();
-#endif
 
 #ifdef WIREGL
-	if (MANAGE(self)) wireGLSwapBuffers();
+	if (NPROCS(self)>0) glBarrierExec(BARRIER(self));
+	if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0)) wireGLSwapBuffers();
 #else
 	if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
 #endif
@@ -3350,6 +3355,9 @@ static void ren_destroy() {
     free( (P_Void_ptr)AMBIENTCOLOR(self) );
 #ifndef USE_OPENGL
     free( (P_Void_ptr)LM(self) );
+#ifdef WIREGL
+    if (NPROCS(self)>0) glBarrierDestroy(BARRIER(self));
+#endif
 #endif
     free ((P_Void_ptr)self);
     METHOD_DESTROYED
@@ -3427,6 +3435,25 @@ static P_Void_ptr def_gob(char *name, struct P_Gob_struct *gob) {
     return((P_Void_ptr)0);
 }
 
+static char* getTrimmedValue(char* string)
+{
+  /* This returns the value of a pair like 'name="foo"', using the same storage as
+   * the input string.  Surrounding quotes or double quotes are removed if present.
+   */
+  char* result= strchr(string,'=');
+  char* end;
+
+  if (!result) return NULL;
+
+  result++; /* skip to following char */
+  if (*result == '\'' || *result == '"') result++;
+  end= result;
+  while (*end) end++;
+  if ((end>result) && (*(end-1)=='\'' || *(end-1)=='"')) end--;
+  *end= '\0';
+  return result;
+}
+
 P_Renderer *po_create_gl_renderer( char *device, char *datastr )
 /* This routine creates a ptr-generating renderer object */
 {
@@ -3435,10 +3462,10 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   P_Renderer_data *rdata;
   long xsize, ysize;
   register short lupe;
-  char *where;
   int x,y,result; /*For prefposition*/
   unsigned int width, height; /*For prefsize*/
   char *name, *size;
+  int nprocs_set= 0, rank_set= 0;
   
   ger_debug("po_create_gl_renderer: device= <%s>, datastr= <%s>",
 	    device, datastr);
@@ -3470,62 +3497,53 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   else AUTO(self)= 0;
 
   /*parse the datastr string*/
-  /*At present, because we only take "name" and "size" arguments,
-    we're just looking forward for a "n" or a "s", searching forward for the 
-    ", getting the data up to the next ", and repeating.
-    We'll also support "p" for "position" and "g" for "geometry"
-   in place of "s", and "t" for "title" in place of "n".
-   */
-
-  where= NULL;
-  name= (char*)malloc(strlen("p3d-gl")+1);
-  strcpy(name,"p3d-gl");
+  name= strdup("p3d-gl");
   size = NULL;
+  NPROCS(self)= 0;
+  RANK(self)= 0;
   
   if (datastr) {
     char* size_start= NULL;
     char* name_start= NULL;
-    where = (char *)malloc(strlen(datastr)+1);
-    strcpy(where, datastr);
-    name_start= strstr(where,"title");
-    if (!name_start) name_start= strstr(where,"TITLE");
-    if (!name_start) name_start= strstr(where,"name");
-    if (!name_start) name_start= strstr(where,"NAME");
-    size_start= strstr(where,"geom");
-    if (!size_start) size_start= strstr(where,"GEOM");
-    if (!size_start) size_start= strstr(where,"size");
-    if (!size_start) size_start= strstr(where,"SIZE");
-    if (name_start) {
-      /* Pick out title string */
-      char* tmp= NULL;
-      name_start= strchr(name_start,'"'); /* leading quote */
-      name_start++;
-      if (name_start && *name_start) {
-	tmp= strchr(name_start,'"'); /* trailing quote */
-	if (tmp) *tmp= '\0';
+    char* nprocs_start= NULL;
+    char* rank_start= NULL;
+    char* thisTok;
+    char* where;
+    char* dupDatastr= strdup(datastr);
+    int firstPass= 1;
+    while ( thisTok= strtok_r( (firstPass ? dupDatastr : NULL), ",", &where ) ) {
+      if (!strncasecmp(thisTok,"name=",strlen("name="))
+	  || !strncasecmp(thisTok,"title=",strlen("title="))) {
 	if (name) free(name);
-	name= (char*)malloc(strlen(name_start)+1);
-	strcpy(name,name_start);
+	name= strdup( getTrimmedValue(thisTok) );
       }
-    }
-    if (size_start) {
-      /* Pick out geom string */
-      char* tmp= NULL;
-      size_start= strchr(size_start,'"'); /* leading quote */
-      size_start++;
-      if (size_start && *size_start) {
-	tmp= strchr(size_start,'"'); /* trailing quote */
-	if (tmp) *tmp= '\0';
-	size= size_start;
+      else if (!strncasecmp(thisTok,"size=",strlen("size="))
+	  || !strncasecmp(thisTok,"geometry=",strlen("geometry="))) {
+	size= strdup(getTrimmedValue(thisTok));
       }
+      else if (!strncasecmp(thisTok,"nprocs=",strlen("nprocs="))) {
+	NPROCS(self)= atoi(getTrimmedValue(thisTok));
+	nprocs_set= 1;
+      }
+      else if (!strncasecmp(thisTok,"rank=",strlen("rank="))) {
+	RANK(self)= atoi(getTrimmedValue(thisTok));
+	rank_set= 1;
+      }
+      else ger_error("po_create_gl_renderer: unrecognized data string element <%s>!\n",thisTok);
+      firstPass= 0;
     }
-
+    free(dupDatastr);
   }
   
   NAME(self) = name;
   RENDATA(self)->initialized= 0;
   init_gl_structure(self);
   
+  if (nprocs_set && !rank_set) 
+    ger_fatal("po_create_gl_renderer: if nprocs is specified, rank must be also.\n");
+  if (rank_set && !nprocs_set) 
+    ger_fatal("po_create_gl_renderer: if rank is specified, nprocs must be also.\n");
+
   /*start by parsing the size into a geometry spec...*/
   
   if (MANAGE(self)) {
@@ -3547,7 +3565,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
     }
   }
 
-  if (where) free((P_Void_ptr)where);
+  if (size) free(size);
 
   if (MANAGE(self)) set_drawing_window(self);
   return (self);
@@ -3564,6 +3582,12 @@ void init_gl_structure (P_Renderer *self)
      CYLINDER(self)= NULL;
      CYLINDER_DEFINED(self)= 0;
      LIGHT_NUM(self)= GL_LIGHT0;
+     if (NPROCS(self)>0) {
+       BARRIER(self)= ren_seq_num;
+     }
+     else {
+       BARRIER(self)= 0;
+     }
 #endif
 
      BACKGROUND(self) = (float *)(malloc(4*sizeof(float)));
@@ -3670,7 +3694,7 @@ void init_gl_gl (P_Renderer *self)
      glClearColor(0.0,0.0,0.0,0.0); 
 
 #ifdef WIREGL
-     if (MANAGE(self)) wireGLSwapBuffers();
+     if (MANAGE(self) && (NPROCS(self)==0 || RANK(self)==0)) wireGLSwapBuffers();
 #else
      if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
 #endif
