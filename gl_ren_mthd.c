@@ -31,8 +31,11 @@ This module provides renderer methods for the IRIS gl renderer
 #include <gl/glws.h>
 #include <gl/gl.h>
 #include <X11/Xirisw/GlxMDraw.h>
+
 #ifndef _IBMR2
+#define Object GL_Object
 #include <gl/sphere.h>
+#undef Object
 #endif
 
 #include "gl_strct.h"
@@ -380,114 +383,6 @@ static void ren_transform(P_Transform trans) {
     multmatrix(theMatrix);
 }
 
-static void def_polything(P_Renderer *self, P_Vlist *vertices) {
-    int lupe;
-    float vtx[3];
-    float col4[4], nor[3];
-    color_mode_type color_mode;
-
-    ger_debug("gl_ren_mthd: def_polything\n");
-
-    METHOD_RDY(vertices);
-
-    switch(vertices->type) {
-    case P3D_CVTX:
-	/*Coordinate vertex list: feed and draw.*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CCVTX:
-	/*Coordinate/color vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    col4[0] = (*vertices->r)(lupe);
-	    col4[1] = (*vertices->g)(lupe);
-	    col4[2] = (*vertices->b)(lupe);
-	    col4[3] = (*vertices->a)(lupe);
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CCNVTX:
-	/*Coordinate/color/normal vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    nor[0] = (*vertices->nx)(lupe);
-	    nor[1] = (*vertices->ny)(lupe);
-	    nor[2] = (*vertices->nz)(lupe);
-	    n3f(nor);
-	    col4[0] = (*vertices->r)(lupe);
-	    col4[1] = (*vertices->g)(lupe);
-	    col4[2] = (*vertices->b)(lupe);
-	    col4[3] = (*vertices->a)(lupe);
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CNVTX:
-	/*Coordinate/normal vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    nor[0] = (*vertices->nx)(lupe);
-	    nor[1] = (*vertices->ny)(lupe);
-	    nor[2] = (*vertices->nz)(lupe);
-	    n3f(nor);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CVVTX:
-	/*Coordinate/value vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    get_rgb_color(self, col4,(*vertices->v)(lupe));
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CVNVTX:
-	/*Coordinate/normal/value vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    nor[0] = (*vertices->nx)(lupe);
-	    nor[1] = (*vertices->ny)(lupe);
-	    nor[2] = (*vertices->nz)(lupe);
-	    n3f(nor);
-	    get_rgb_color(self, col4,(*vertices->v)(lupe));
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CVVVTX:
-	/*Coordinate/value/value vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    get_rgb_color(self, col4,(*vertices->v)(lupe));
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    default:
-	printf("gl_ren_mthd: def_polything: null vertex type.\n");
-	break;
-    } /*switch(vertices->type)*/
-}
-
 static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 		P_Attrib_List *attrs) {
     
@@ -701,8 +596,89 @@ static void ren_polyline(P_Void_ptr the_thing, P_Transform *transform,
     }
     else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
     ren_prim_finish( transform, screendoor_set );
-    METHOD_OUT
   }
+  METHOD_OUT
+}
+
+static void ren_polygon(P_Void_ptr the_thing, P_Transform *transform,
+		P_Attrib_List *attrs) {
+    
+  P_Renderer *self = (P_Renderer *)po_this;
+  gl_gob *it= (gl_gob*)the_thing;
+  int screendoor_set;
+  METHOD_IN
+
+  if (RENDATA(self)->open) {
+    ger_debug("gl_ren_mthd: ren_polygon");
+    if (!it) {
+      ger_error("gl_ren_mthd: ren_polygon: null object data found.");
+      METHOD_OUT
+      return;
+    }
+    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+    if (it->cvlist) {
+      bgnpolygon();
+      send_cached_vlist( it->cvlist );
+      endpolygon();
+    }
+    else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
+    ren_prim_finish( transform, screendoor_set );
+  }
+  METHOD_OUT
+}
+
+static void ren_polymarker(P_Void_ptr the_thing, P_Transform *transform,
+			   P_Attrib_List *attrs) {
+    
+  P_Renderer *self = (P_Renderer *)po_this;
+  gl_gob *it= (gl_gob*)the_thing;
+  int screendoor_set;
+  METHOD_IN
+
+  if (RENDATA(self)->open) {
+    ger_debug("gl_ren_mthd: ren_polymarker");
+    if (!it) {
+      ger_error("gl_ren_mthd: ren_polymarker: null object data found.");
+      METHOD_OUT
+      return;
+    }
+    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+    if (it->cvlist) {
+      bgnpoint();
+      send_cached_vlist( it->cvlist );
+      endpoint();
+    }
+    else ger_error("gl_ren_mthd: ren_polymarker: null cvlist found!");
+    ren_prim_finish( transform, screendoor_set );
+  }
+  METHOD_OUT
+}
+
+static void ren_tristrip(P_Void_ptr the_thing, P_Transform *transform,
+		P_Attrib_List *attrs) {
+    
+  P_Renderer *self = (P_Renderer *)po_this;
+  gl_gob *it= (gl_gob*)the_thing;
+  int screendoor_set;
+  METHOD_IN
+
+  if (RENDATA(self)->open) {
+    ger_debug("gl_ren_mthd: ren_polyline");
+    if (!it) {
+      ger_error("gl_ren_mthd: ren_polyline: null object data found.");
+      METHOD_OUT
+      return;
+    }
+    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+    if (it->cvlist) {
+      bgntmesh();
+      send_cached_vlist( it->cvlist );
+      endtmesh();
+    }
+    else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
+    ren_prim_finish( transform, screendoor_set );
+  }
+  METHOD_OUT
 }
 
 static P_Void_ptr def_sphere(char *name) {
@@ -716,26 +692,27 @@ static P_Void_ptr def_sphere(char *name) {
   if (RENDATA(self)->open) {
     ger_debug("gl_ren_mthd: def_sphere");
 
-#if ( AVOID_NURBS || _IBMR2 )
-    METHOD_RDY(ASSIST(self));
-    result= (*(ASSIST(self)->def_sphere))();
-    METHOD_OUT
-    return( (P_Void_ptr)result );
-#else
     if (my_sphere) {
 	METHOD_OUT
 	return((P_Void_ptr)my_sphere);
     }
 
+#if ( AVOID_NURBS || _IBMR2 )
+    METHOD_RDY(ASSIST(self));
+    my_sphere= result= (*(ASSIST(self)->def_sphere))();
+    METHOD_OUT
+    return( (P_Void_ptr)result );
+#else
+
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
 	ger_fatal("def_sphere: unable to allocate %d bytes!", sizeof(gl_gob));
     
-    sphobj( it->obj=genobj() );
+    sphobj( it->obj= genobj() );
     /*As of now, we've defined the object. Aren't libraries wonderfull?*/
 
     it->color_mode = LMC_AD;
     it->cvlist= NULL;
-    my_sphere = it;
+    /* my_sphere = it; */
     METHOD_OUT
     return((P_Void_ptr)it);
 
@@ -1126,7 +1103,6 @@ static void destroy_gob( P_Void_ptr primdata )
 }
 
 static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
-    /*Use def_polything to get the image*/
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
@@ -1145,25 +1121,12 @@ static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
     it->color_mode= LMC_COLOR;
     it->obj= NULL;
     it->cvlist= cache_vlist(self, vertices);
-#ifdef never
-    makeobj( it->obj=genobj() );
-    /*As of now, we're defining the object*/
-    
-    it->color_mode = LMC_COLOR;
-    it->cvlist= NULL;
-
-    bgnline();
-    def_polything(self, vertices);
-    endline();
-    closeobj();
-#endif
 
     METHOD_OUT
     return((P_Void_ptr)it);
 }
 
 static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
-    /*Use def_polything to get the image*/
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
@@ -1178,21 +1141,15 @@ static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
 	ger_fatal("def_polygon: unable to allocate %d bytes!", sizeof(gl_gob));
     
-    makeobj( it->obj=genobj() );
-    /*As of now, we're defining the object*/
-    
-    it->color_mode = LMC_COLOR;
-    it->cvlist= NULL;
-    bgnpolygon();
-    def_polything(self, vertices);
-    endpolygon();
-    closeobj();
+    it->color_mode= LMC_COLOR;
+    it->obj= NULL;
+    it->cvlist= cache_vlist(self, vertices);
+
     METHOD_OUT
     return((P_Void_ptr)it);
 }
 
 static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
-    /*Use def_polything to get the image*/
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
@@ -1207,22 +1164,15 @@ static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
 	ger_fatal("def_polymarker: unable to allocate %d bytes!", sizeof(gl_gob));
     
-    makeobj( it->obj=genobj() );
-    /*As of now, we're defining the object*/
-    
-    it->color_mode = LMC_COLOR;
-    it->cvlist= NULL;
+    it->color_mode= LMC_COLOR;
+    it->obj= NULL;
+    it->cvlist= cache_vlist(self, vertices);
 
-    bgnline();
-    def_polything(self, vertices);
-    endline();
-    closeobj();
     METHOD_OUT
     return((P_Void_ptr)it);
 }
 
 static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
-    /*Use def_polything to get the image*/
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
@@ -1237,16 +1187,9 @@ static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
 	ger_fatal("def_tristrip: unable to allocate %d bytes!", sizeof(gl_gob));
     
-    makeobj( it->obj=genobj() );
-    /*As of now, we're defining the object*/
-
-    it->color_mode = LMC_COLOR;
-    it->cvlist= NULL;
-
-    bgntmesh();
-    def_polything(self, vertices);
-    endtmesh();
-    closeobj();
+    it->color_mode= LMC_COLOR;
+    it->obj= NULL;
+    it->cvlist= cache_vlist(self, vertices);
     METHOD_OUT
     return((P_Void_ptr)it);
 }
@@ -2203,7 +2146,7 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      self->destroy_torus= destroy_object;
 
      self->def_polymarker= def_polymarker;
-     self->ren_polymarker= ren_object;
+     self->ren_polymarker= ren_polymarker;
      self->destroy_polymarker= destroy_object;
 
      self->def_polyline= def_polyline;
@@ -2211,11 +2154,11 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      self->destroy_polyline= destroy_object;
 
      self->def_polygon= def_polygon;
-     self->ren_polygon= ren_object;
+     self->ren_polygon= ren_polygon;
      self->destroy_polygon= destroy_object;
 
      self->def_tristrip= def_tristrip;
-     self->ren_tristrip= ren_object;
+     self->ren_tristrip= ren_tristrip;
      self->destroy_tristrip= destroy_object;
 
      self->def_bezier= def_bezier;
