@@ -142,7 +142,7 @@ extern P_Color_Map *po_create_color_map( char * name, double min, double max,
               sizeof(P_Color_Map) );
 
   thismap->object_data= (P_Void_ptr)0;
-  strncpy(&(thismap->name),name,P3D_NAMELENGTH);
+  strncpy((char*)&(thismap->name),name,P3D_NAMELENGTH);
   thismap->name[P3D_NAMELENGTH-1]= '\0';
   thismap->min= min;
   thismap->max= max;

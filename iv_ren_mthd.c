@@ -1606,7 +1606,7 @@ static char* generate_fname()
     if (has_extension) {
       strncpy(result, NAME(self), ext_offset+1);
       sprintf(result+ext_offset+1,"%.4d",FILENUM(self));
-      strncat(result, NAME(self)+ext_offset);
+      strcat(result, NAME(self)+ext_offset);
     }
     else {
       strcpy(result, NAME(self));
