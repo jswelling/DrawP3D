@@ -272,8 +272,22 @@ static void init_gl_structure (P_Renderer *self);
 static void init_gl_gl (P_Renderer *self); 
 static void ren_print();
 
+static void init_chromium_hooks()
+{
+#ifdef USE_OPENGL
+    if (!glBarrierCreateCR) LOAD2( BarrierCreate );
+    if (!glBarrierCreateCR) glBarrierCreateCR= dummyBarrierCreate;
+    if (!glBarrierExecCR) LOAD2( BarrierExec );
+    if (!glBarrierExecCR) glBarrierExecCR= dummyBarrierExec;
+    if (!glBarrierDestroyCR) LOAD2( BarrierDestroy );
+    if (!glBarrierDestroyCR) glBarrierDestroyCR= dummyBarrierDestroy;
+#endif /* USE_OPENGL */
+}
+
 static int chromium_in_use()
 {
+  if (glBarrierCreateCR == NULL) /* not initialized */
+    init_chromium_hooks();
   return (glCreateContextCR != NULL);
 }
 
@@ -407,7 +421,7 @@ static void attach_drawing_window( P_Renderer* self )
     cmap = XCreateColormap(XDISPLAY(self), RootWindow(XDISPLAY(self), vi->screen),
 			   vi->visual, AllocNone);
     if (!cmap) {
-      ger_fatal("create_drawing_window: XCreateColormap failed unexpectedly!");
+      ger_fatal("attach_drawing_window: XCreateColormap failed unexpectedly!");
     }
     
     /* create the sub window */
@@ -3894,27 +3908,16 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
     else {
       create_drawing_window(self, size);
     }
+    set_drawing_window(self);
   }
 
   if (size) free(size);
 
-  if (MANAGE(self)) {
-#ifdef USE_OPENGL
-    if (!glBarrierCreateCR) LOAD2( BarrierCreate );
-    if (!glBarrierCreateCR) glBarrierCreateCR= dummyBarrierCreate;
-    if (!glBarrierExecCR) LOAD2( BarrierExec );
-    if (!glBarrierExecCR) glBarrierExecCR= dummyBarrierExec;
-    if (!glBarrierDestroyCR) LOAD2( BarrierDestroy );
-    if (!glBarrierDestroyCR) glBarrierDestroyCR= dummyBarrierDestroy;
-#endif /* USE_OPENGL */
-
-    set_drawing_window(self);
-  }
   return (self);
 }
 
 /* complete structure initalization (note: no actual gl calls here) */
-void init_gl_structure (P_Renderer *self)
+static void init_gl_structure (P_Renderer *self)
 {
   register short lupe;
 
@@ -4036,7 +4039,7 @@ void init_gl_structure (P_Renderer *self)
 /* gl calls necessary to complete drawp3d initalization
      after the widget is realized or the window is up
 */
-void init_gl_gl (P_Renderer *self)
+static void init_gl_gl (P_Renderer *self)
 {
   unsigned int xsize, ysize;
   int xcorner, ycorner;
