@@ -1,0 +1,104 @@
+include ${TOP}/conf/Makefile.${ARCH}
+include ${TOP}/depend.mk.${ARCH}
+
+O = ${TOP}/obj/${ARCH}
+L = ${TOP}/lib/${ARCH}
+B = ${TOP}/bin/${ARCH}
+
+SUBMAKES= doc
+
+BUILD_EXES = $B/c_tester $B/tori $B/tube_mol_tester \
+	$B/autopaint_tester $B/obj_tester
+FTN_BUILD_EXES = $B/f_tester
+BUILD_LIBS = ${L}/libdrawp3d.a
+
+CSOURCE= ambient_mthd.c assist_attr.c assist.c assist_prim.c \
+	assist_spln.c assist_text.c assist_trns.c attribute.c \
+	autopaint_tester.c axis.c bezier_mthd.c boundbox.c \
+	camera_mthd.c chash_mthd.c cmap_mthd.c color.c c_tester.c \
+	cube_cases.c c_vlist_mthd.c cyl_mthd.c dch_tester.c \
+	default_attr.c dirichlet.c drawp3d_ci.c drawp3d_fi.c \
+	dum_ren_mthd.c f_vlist_mthd.c gauss.c ge_error.c gen_painter.c \
+	gl_ren_mthd.c gl_ren_tester.c gob_mthd.c ihash_mthd.c indent.c \
+	irreg_isosf.c irreg_zsurf.c iso_demo.c isosurf.c iv_ren_mthd.c \
+	light_mthd.c lvr_ren_mthd.c material.c mesh_mthd.c \
+	m_vlist_mthd.c null_mthd.c obj_tester.c p3dgen.c \
+	p3d_ren_mthd.c painter.c painter_clip.c painter_util.c \
+	paintr_trans.c pgon_mthd.c pline_mthd.c pmark_mthd.c \
+	pnt_ren_mthd.c pvm_ren_mthd.c rand_isosurf.c rand_zsurf.c \
+	shutdown_tester.c sphere_mthd.c spline.c std_cmap.c symbol.c \
+	test2.c test3.c test.c text_mthd.c tori.c torus_mthd.c \
+	transform.c tri_mthd.c tube_molecules.c tube_mol_tester.c \
+	vector.c vrml_ren_mthd.c xdrawih.c xpainter.c xpnt_ren_mthd.c \
+	zsurface.c
+
+CXXSOURCE= fl_gl_interface.cxx fl_gl_stuff.cxx
+
+FSOURCE= f_tester.f drawp3d_def.f
+
+HFILES= assist.h FNAMES.h p3dgen.h sphere.h cr_applications.h \
+	ge_error.h p3d_preamble.h spline.h cr_glwrapper.h \
+	gen_painter.h painter.h std_cmap.h cylinder.h \
+	gen_paintr_strct.h paintr_strct.h unicos_defs.h dirichlet.h \
+	gl_incl.h pgen_objects.h unix_defs.h drawp3d.h gl_strct.h \
+	pvm3.h xdrawih.h Fl_DrawP3D_Window.h hershey.h pvm_geom.h \
+	fl_gl_interface.h indent.h pvm_ren_mthd.h fnames_.h \
+	iv_ren_mthd.h random_flts.h fl_gl_interface.h
+
+DOCFILES=
+
+MISCFILES= Makefile Makefile.common c_test_std.t f_test_std.t notes.t \
+	ob_test_std.t descrip.mms cc.opt dp3d_fi_jbl.jbl
+
+LIB_OBJ= $O/ge_error.o $O/indent.o $O/c_vlist_mthd.o $O/f_vlist_mthd.o \
+	$O/m_vlist_mthd.o $O/null_mthd.o \
+	$O/camera_mthd.o $O/transform.o $O/attribute.o $O/gob_mthd.o \
+	$O/sphere_mthd.o $O/cyl_mthd.o $O/torus_mthd.o $O/text_mthd.o \
+	$O/light_mthd.o $O/ambient_mthd.o $O/pmark_mthd.o \
+	$O/pline_mthd.o $O/pgon_mthd.o $O/tri_mthd.o \
+	$O/bezier_mthd.o $O/mesh_mthd.o $O/cmap_mthd.o $O/chash_mthd.o \
+	$O/p3dgen.o $O/std_cmap.o $O/color.o $O/drawp3d_fi.o \
+	$O/drawp3d_ci.o $O/boundbox.o $O/isosurf.o $O/axis.o \
+	$O/vector.o $O/zsurface.o $O/material.o $O/dirichlet.o \
+	$O/gauss.o $O/rand_zsurf.o $O/rand_isosurf.o $O/symbol.o \
+	$O/ihash_mthd.o $O/assist_attr.o $O/default_attr.o \
+	$O/assist_prim.o $O/assist_spln.o $O/assist_text.o \
+	$O/assist_trns.o $O/assist.o $O/dum_ren_mthd.o \
+	$O/p3d_ren_mthd.o $O/irreg_zsurf.o $O/irreg_isosf.o \
+	$O/tube_molecules.o $O/spline.o 
+
+# The configuration include file adds to the lists of objects and flags
+include ${TOP}/config.mk.${ARCH}
+
+$L/libdrawp3d.a: libdir $(LIB_OBJ)
+	@echo "Assembling " $@
+	@$(AR) $@ $(LIB_OBJ)
+	@$(RANLIB) $@
+
+$B/c_tester: bindir $O/c_tester.o ${LIB_OBJ}
+	@echo "Linking " $@
+	@$(CC) -o $@ ${LFLAGS} $O/c_tester.o $(LIB_OBJ) $(LIBS)
+
+$B/f_tester: bindir $O/f_tester.o $(LIB_OBJ)
+	@echo "Linking " $@
+	@$(FC) -o $@ ${LFLAGS} $O/f_tester.o $(LIB_OBJ) $(LIBS) $(FLIBS)
+
+$B/obj_tester: bindir $O/obj_tester.o $(LIB_OBJ)
+	@echo "Linking " $@
+	@$(CC) -o $@ ${LFLAGS} $O/obj_tester.o $(LIB_OBJ) $(LIBS)
+
+$B/tube_mol_tester: bindir $O/tube_mol_tester.o $L/libdrawp3d.a
+	@echo "Linking " $@
+	@$(CC) -o $@ ${LFLAGS} $O/tube_mol_tester.o -L$L -ldrawp3d $(LIBS)
+
+$B/tori: bindir $O/tori.o $L/libdrawp3d.a
+	@echo "Linking " $@
+	@$(CC) -o $@ ${LFLAGS} $O/tori.o -L$L -ldrawp3d $(LIBS)
+
+$B/autopaint_tester: $O/autopaint_tester.o $L/libdrawp3d.a
+	@$(CC) -o $@ $O/autopaint_tester.o -L$L -ldrawp3d $(LIBS)
+
+$B/gl_ren_tester: $O/gl_ren_tester.o $L/libdrawp3d.a
+	$(CC) -o $@ $O/gl_ren_tester.o -L$L -ldrawp3d $(LIBS)
+
+include ${TOP}/rules.mk
