@@ -21,11 +21,11 @@ This module provides renderer methods for the IRIS gl renderer
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#include <X11/Intrinsic.h>
 #include "p3dgen.h"
 #include "pgen_objects.h"
 #include "ge_error.h"
 #include "assist.h"
+#include <X11/Intrinsic.h>
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
 #include <gl/glws.h>
@@ -34,6 +34,7 @@ This module provides renderer methods for the IRIS gl renderer
 #ifndef _IBMR2
 #include <gl/sphere.h>
 #endif
+
 #include "gl_strct.h"
 
 /* IBM AIX misses some definitions */
@@ -160,6 +161,184 @@ static void gl_resize_cb(Widget w, P_Renderer *self, XtPointer call_data);
 P_Renderer *init_gl_normal (P_Renderer *self);
 void init_gl_widget (P_Renderer *self); 
 
+static void get_rgb_color(P_Renderer *self, float* col, float val) {
+    /*Return the RGB value from the colormap.*/
+
+    /* Scale, clip, and map. */
+    val= ( val-MAP_MIN(self) )/( MAP_MAX(self)-MAP_MIN(self) );
+    if ( val > 1.0 ) val= 1.0;
+    if ( val < 0.0 ) val= 0.0;
+    (*MAP_FUN(self))( &val, &col[0], &col[1], &col[2], &col[3]);
+}
+
+static P_Cached_Vlist* cache_vlist( P_Renderer *self, P_Vlist *vlist )
+/* This routine outputs a vertex list */
+{
+  int i;
+  P_Cached_Vlist* result;
+
+  ger_debug("pvm_ren_mthd: cache_vlist");
+
+  if ( !(result=(P_Cached_Vlist*)malloc(sizeof(P_Cached_Vlist))) ) {
+    fprintf(stderr,"pvm_ren_mthd: cache_vlist: unable to allocate %d bytes!\n",
+	    sizeof(P_Cached_Vlist));
+    exit(-1);
+  }
+
+  METHOD_RDY(vlist)
+  result->length= vlist->length;
+
+  if ((vlist->type != P3D_CVTX)
+      && (vlist->type != P3D_CCVTX)
+      && (vlist->type != P3D_CNVTX)
+      && (vlist->type != P3D_CCNVTX)
+      && (vlist->type != P3D_CVVTX)
+      && (vlist->type != P3D_CVNVTX)
+      && (vlist->type != P3D_CVVVTX)) {
+    fprintf(stderr,"pvm_ren_mthd: cache_vlist: got unknown vertex type %d!\n",
+	    vlist->type);
+  }
+
+  /* Allocate memory as needed */
+  if ( !(result->coords= 
+	 (float*)malloc( 3*result->length*sizeof(float) )) ) {
+    fprintf(stderr,"pvm_ren_mthd: cannot allocate %d bytes!\n",
+	    3*result->length*sizeof(float));
+    exit(-1);
+  }
+
+  if ((vlist->type==P3D_CCVTX)
+      || (vlist->type==P3D_CCNVTX)
+      || (vlist->type==P3D_CVVTX)
+      || (vlist->type==P3D_CVVVTX)
+      || (vlist->type==P3D_CVNVTX)) {
+    if ( !(result->colors= 
+	   (float*)malloc( 4*result->length*sizeof(float) )) ) {
+      fprintf(stderr,"pvm_ren_mthd: cannot allocate %d bytes!\n",
+	      4*result->length*sizeof(float));
+      exit(-1);
+    }
+  }
+  else {
+    result->colors= NULL;
+  }
+
+  if ((vlist->type==P3D_CNVTX)
+      || (vlist->type==P3D_CCNVTX)
+      || (vlist->type==P3D_CVNVTX)) {
+    if ( !(result->normals= 
+	   (float*)malloc( 3*result->length*sizeof(float) )) ) {
+      fprintf(stderr,"pvm_ren_mthd: cannot allocate %d bytes!\n",
+	      3*result->length*sizeof(float));
+      exit(-1);
+    }
+  }
+  else result->normals= NULL;
+
+  if (result->colors) {
+    if (result->normals) result->type= P3D_CCNVTX;
+    else result->type= P3D_CCVTX;
+  }
+  else {
+    if (result->normals) result->type= P3D_CNVTX;
+    else result->type= P3D_CVTX;
+  }
+
+  for (i=0; i<result->length; i++) {
+    result->coords[3*i]= (*(vlist->x))(i);
+    result->coords[3*i+1]= (*(vlist->y))(i);
+    result->coords[3*i+2]= (*(vlist->z))(i);
+    switch (vlist->type) {
+    case P3D_CVTX:
+      break;
+    case P3D_CNVTX:
+      result->normals[3*i]= (*(vlist->nx))(i);
+      result->normals[3*i+1]= (*(vlist->ny))(i);
+      result->normals[3*i+2]= (*(vlist->nz))(i);
+      break;
+    case P3D_CCVTX:
+      result->colors[4*i]= (*(vlist->r))(i);
+      result->colors[4*i+1]= (*(vlist->g))(i);
+      result->colors[4*i+2]= (*(vlist->b))(i);
+      result->colors[4*i+3]= (*(vlist->a))(i);
+      break;
+    case P3D_CCNVTX:
+      result->colors[4*i]= (*(vlist->r))(i);
+      result->colors[4*i+1]= (*(vlist->g))(i);
+      result->colors[4*i+2]= (*(vlist->b))(i);
+      result->colors[4*i+3]= (*(vlist->a))(i);
+      result->normals[3*i]= (*(vlist->nx))(i);
+      result->normals[3*i+1]= (*(vlist->ny))(i);
+      result->normals[3*i+2]= (*(vlist->nz))(i);
+      break;
+    case P3D_CVVTX:
+    case P3D_CVVVTX:
+      get_rgb_color( self, result->colors+4*i, (*(vlist->v))(i) );
+      break;
+    case P3D_CVNVTX:
+      get_rgb_color( self, result->colors+4*i, (*(vlist->v))(i) );
+      result->normals[3*i]= (*(vlist->nx))(i);
+      result->normals[3*i+1]= (*(vlist->ny))(i);
+      result->normals[3*i+2]= (*(vlist->nz))(i);
+      break;
+      /* We've already checked that it is a known case */
+    }
+  }
+
+  return( result );
+}
+
+static void free_cached_vlist( P_Cached_Vlist* cache )
+{
+  if (cache->normals) free( (P_Void_ptr)(cache->normals) );
+  if (cache->colors) free( (P_Void_ptr)(cache->colors) );
+  free( (P_Void_ptr)cache->coords );
+  free( (P_Void_ptr)cache );
+}
+
+static void send_cached_vlist( P_Cached_Vlist* cvlist )
+{
+  int i;
+  float* crd_runner= cvlist->coords;
+  float* clr_runner= cvlist->colors;
+  float* nrm_runner= cvlist->normals;
+  switch(cvlist->type) {
+  case P3D_CVTX:
+    for (i=0; i<cvlist->length; i++) {
+      v3f(crd_runner);
+      crd_runner += 3;
+    }
+    break;
+  case P3D_CCVTX:
+    for (i=0; i<cvlist->length; i++) {
+      c4f(clr_runner);
+      clr_runner += 4;
+      v3f(crd_runner);
+      crd_runner += 3;
+    }
+    break;
+  case P3D_CNVTX:
+    for (i=0; i<cvlist->length; i++) {
+      n3f(nrm_runner);
+      nrm_runner += 3;
+      v3f(crd_runner);
+      crd_runner += 3;
+    }
+    break;
+  case P3D_CCNVTX:
+    for (i=0; i<cvlist->length; i++) {
+      n3f(nrm_runner);
+      nrm_runner += 3;
+      c4f(clr_runner);
+      clr_runner += 4;
+      v3f(crd_runner);
+      crd_runner += 3;
+    }
+    break;
+  default:
+    ger_error("gl_ren_mthd: send_cached_vlist: unknown vertex type!");
+  }
+}
 
 static void destroy_object(P_Void_ptr the_thing) {
     /*Destroys any object.*/
@@ -180,11 +359,13 @@ static void destroy_object(P_Void_ptr the_thing) {
 	METHOD_OUT
 	return;
     }
-    
+
     if (it) {
-	if (isobj(it->obj))
-	    delobj(it->obj);	
-	free((void *)it);
+      if (it->obj && isobj(it->obj)) {
+	delobj(it->obj);	
+      }
+      if (it->cvlist) free_cached_vlist( it->cvlist );
+      free((void *)it);
     }
     METHOD_OUT
 }
@@ -199,6 +380,114 @@ static void ren_transform(P_Transform trans) {
     multmatrix(theMatrix);
 }
 
+static void def_polything(P_Renderer *self, P_Vlist *vertices) {
+    int lupe;
+    float vtx[3];
+    float col4[4], nor[3];
+    color_mode_type color_mode;
+
+    ger_debug("gl_ren_mthd: def_polything\n");
+
+    METHOD_RDY(vertices);
+
+    switch(vertices->type) {
+    case P3D_CVTX:
+	/*Coordinate vertex list: feed and draw.*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    case P3D_CCVTX:
+	/*Coordinate/color vertex list*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    col4[0] = (*vertices->r)(lupe);
+	    col4[1] = (*vertices->g)(lupe);
+	    col4[2] = (*vertices->b)(lupe);
+	    col4[3] = (*vertices->a)(lupe);
+	    c4f(col4);
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    case P3D_CCNVTX:
+	/*Coordinate/color/normal vertex list*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    nor[0] = (*vertices->nx)(lupe);
+	    nor[1] = (*vertices->ny)(lupe);
+	    nor[2] = (*vertices->nz)(lupe);
+	    n3f(nor);
+	    col4[0] = (*vertices->r)(lupe);
+	    col4[1] = (*vertices->g)(lupe);
+	    col4[2] = (*vertices->b)(lupe);
+	    col4[3] = (*vertices->a)(lupe);
+	    c4f(col4);
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    case P3D_CNVTX:
+	/*Coordinate/normal vertex list*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    nor[0] = (*vertices->nx)(lupe);
+	    nor[1] = (*vertices->ny)(lupe);
+	    nor[2] = (*vertices->nz)(lupe);
+	    n3f(nor);
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    case P3D_CVVTX:
+	/*Coordinate/value vertex list*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    get_rgb_color(self, col4,(*vertices->v)(lupe));
+	    c4f(col4);
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    case P3D_CVNVTX:
+	/*Coordinate/normal/value vertex list*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    nor[0] = (*vertices->nx)(lupe);
+	    nor[1] = (*vertices->ny)(lupe);
+	    nor[2] = (*vertices->nz)(lupe);
+	    n3f(nor);
+	    get_rgb_color(self, col4,(*vertices->v)(lupe));
+	    c4f(col4);
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    case P3D_CVVVTX:
+	/*Coordinate/value/value vertex list*/
+	for (lupe=0;lupe<vertices->length;lupe++) {
+	    get_rgb_color(self, col4,(*vertices->v)(lupe));
+	    c4f(col4);
+	    vtx[0] = (*vertices->x)(lupe);
+	    vtx[1] = (*vertices->y)(lupe);
+	    vtx[2] = (*vertices->z)(lupe);
+	    v3f(vtx);
+	}
+	break;
+    default:
+	printf("gl_ren_mthd: def_polything: null vertex type.\n");
+	break;
+    } /*switch(vertices->type)*/
+}
+
 static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 		P_Attrib_List *attrs) {
     
@@ -209,7 +498,7 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
         P_Void_ptr value;
         and two structs for the next and prev things in the list.
     */
-    
+
     P_Renderer *self = (P_Renderer *)po_this;
     P_Color *pcolor;
     float color[4];
@@ -283,7 +572,8 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 	}
 	
 	/*and render*/
-	callobj(it->obj);
+	if (it->obj) callobj(it->obj);
+	else ger_error("gl_ren_mthd: ren_object: null gl object found!");
 	/*And restore*/
 	if (transform)
 	    popmatrix();
@@ -298,6 +588,121 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 	/*Gee, wasn't that easy? :)  */
 	METHOD_OUT
      }
+}
+
+static int ren_prim_setup( P_Renderer* self, gl_gob* it, 
+			   P_Transform* trans, P_Attrib_List* attrs )
+{
+  /* P_Transform is an struct which contains float d[16];*/
+  /* P_Attrib is a struct of
+   * P_Symbol attribute; where P_Symbol is just a P_Void_ptr
+   * int type; where type is te value type
+   * P_Void_ptr value;
+   * and two structs for the next and prev things in the list.
+   */
+  P_Color *pcolor;
+  float color[4];
+  P_Material *mat;
+  int screendoor_set= 0;
+  
+  /*get the attributes*/
+  METHOD_RDY(ASSIST(self));
+  pcolor= (*(ASSIST(self)->color_attribute))(COLORSYMBOL(self));
+  backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
+  mat= (*(ASSIST(self)->material_attribute))(MATERIALSYMBOL(self));
+	
+  /* prepare attributes*/
+  /* we've already defined all of our materials at open time... :)*/
+  /* Note: there is a significant performance penalty for frequently
+   * changing the current material via lmbind...*/
+
+  if (CURMATERIAL(self) != (mat->type + 1))
+    if (mat->type < N_MATERIALS) {
+      lmbind(MATERIAL, mat->type+1);
+      CURMATERIAL(self) = mat->type + 1;
+    } else {
+      lmbind(MATERIAL, 1);
+      CURMATERIAL(self) = 1;
+    }
+
+  /*Set color mode...*/
+  lmcolor(it->color_mode); /*Some like it AD, some like it COLOR...*/
+
+  /* What we're doing in the above call is distinguishing between the
+   * case in which we're updating the COLOR of an object and the case
+   * in which we're updating the color of the MATERIAL of the object.
+   * 
+   * This is a Really Important Distinction. Things with inherent color
+   * attributes are updating their COLOR at various spots, while things
+   * without color attributes, i.e. surfaces of vertices and normals,
+   * must update their materials.
+   *
+   * I guess this'd be easier if we didn't implement materials, but...
+   */
+	
+  /*Set color...*/
+  rgbify_color(pcolor);
+
+  color[0]= pcolor->r;
+  color[1]= pcolor->g;
+  color[2]= pcolor->b;
+  color[3]= pcolor->a;
+  c4f(color);
+
+  if ((! hastransparent) && (color[3] < .5)) {
+    setpattern(GREYPATTERN);
+    zwritemask(0);
+    screendoor_set= 1;
+  }
+
+  /*we should almost never need this segment, but then again,
+	  we might... */
+  if (trans) {
+    pushmatrix();
+    ren_transform(*trans);
+  }
+
+  return screendoor_set;
+}
+
+static void ren_prim_finish( P_Transform *trans, int screendoor_set )
+{
+  if (trans)
+    popmatrix();
+  
+  if (screendoor_set) {
+    setpattern(BLACKPATTERN);
+    zwritemask(0xFFFFFFFF);
+    
+    lmcolor(LMC_COLOR);
+  }
+}
+
+static void ren_polyline(P_Void_ptr the_thing, P_Transform *transform,
+		P_Attrib_List *attrs) {
+    
+  P_Renderer *self = (P_Renderer *)po_this;
+  gl_gob *it= (gl_gob*)the_thing;
+  int screendoor_set;
+  METHOD_IN
+
+  if (RENDATA(self)->open) {
+    ger_debug("gl_ren_mthd: ren_polyline");
+    if (!it) {
+      ger_error("gl_ren_mthd: ren_polyline: null object data found.");
+      METHOD_OUT
+      return;
+    }
+    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+    if (it->cvlist) {
+      bgnline();
+      send_cached_vlist( it->cvlist );
+      endline();
+    }
+    else ger_error("gl_ren_mthd: ren_polyline: null cvlist found!");
+    ren_prim_finish( transform, screendoor_set );
+    METHOD_OUT
+  }
 }
 
 static P_Void_ptr def_sphere(char *name) {
@@ -329,6 +734,7 @@ static P_Void_ptr def_sphere(char *name) {
     /*As of now, we've defined the object. Aren't libraries wonderfull?*/
 
     it->color_mode = LMC_AD;
+    it->cvlist= NULL;
     my_sphere = it;
     METHOD_OUT
     return((P_Void_ptr)it);
@@ -433,6 +839,7 @@ METHOD_IN
       /*As of now, we're defining the object*/
       
       it->color_mode = LMC_AD;
+      it->cvlist= NULL;
       
       translate(0, 0, 1);
       mycircle(1.0, TRUE);
@@ -497,6 +904,7 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
       /*As of now, we're defining the object*/
       
       it->color_mode = LMC_AD;
+      it->cvlist= NULL;
 
       size_s = 9;    
       
@@ -717,149 +1125,39 @@ static void destroy_gob( P_Void_ptr primdata )
   METHOD_OUT
 }
 
-static void get_rgb_color(P_Renderer *self, float col[4], float val) {
-    /*Return the RGB value from the colormap.*/
-
-    /* Scale, clip, and map. */
-    val= ( val-MAP_MIN(self) )/( MAP_MAX(self)-MAP_MIN(self) );
-    if ( val > 1.0 ) val= 1.0;
-    if ( val < 0.0 ) val= 0.0;
-    (*MAP_FUN(self))( &val, &col[0], &col[1], &col[2], &col[3]);
-}
-
-static void def_polything(P_Renderer *self, P_Vlist *vertices) {
-    int lupe;
-    float vtx[3];
-    float col4[4], nor[3];
-    color_mode_type color_mode;
-
-    ger_debug("gl_ren_mthd: def_polything\n");
-
-    METHOD_RDY(vertices);
-
-    switch(vertices->type) {
-    case P3D_CVTX:
-	/*Coordinate vertex list: feed and draw.*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CCVTX:
-	/*Coordinate/color vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    col4[0] = (*vertices->r)(lupe);
-	    col4[1] = (*vertices->g)(lupe);
-	    col4[2] = (*vertices->b)(lupe);
-	    col4[3] = (*vertices->a)(lupe);
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CCNVTX:
-	/*Coordinate/color/normal vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    nor[0] = (*vertices->nx)(lupe);
-	    nor[1] = (*vertices->ny)(lupe);
-	    nor[2] = (*vertices->nz)(lupe);
-	    n3f(nor);
-	    col4[0] = (*vertices->r)(lupe);
-	    col4[1] = (*vertices->g)(lupe);
-	    col4[2] = (*vertices->b)(lupe);
-	    col4[3] = (*vertices->a)(lupe);
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CNVTX:
-	/*Coordinate/normal vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    nor[0] = (*vertices->nx)(lupe);
-	    nor[1] = (*vertices->ny)(lupe);
-	    nor[2] = (*vertices->nz)(lupe);
-	    n3f(nor);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CVVTX:
-	/*Coordinate/value vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    get_rgb_color(self, col4,(*vertices->v)(lupe));
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CVNVTX:
-	/*Coordinate/normal/value vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    nor[0] = (*vertices->nx)(lupe);
-	    nor[1] = (*vertices->ny)(lupe);
-	    nor[2] = (*vertices->nz)(lupe);
-	    n3f(nor);
-	    get_rgb_color(self, col4,(*vertices->v)(lupe));
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    case P3D_CVVVTX:
-	/*Coordinate/value/value vertex list*/
-	for (lupe=0;lupe<vertices->length;lupe++) {
-	    get_rgb_color(self, col4,(*vertices->v)(lupe));
-	    c4f(col4);
-	    vtx[0] = (*vertices->x)(lupe);
-	    vtx[1] = (*vertices->y)(lupe);
-	    vtx[2] = (*vertices->z)(lupe);
-	    v3f(vtx);
-	}
-	break;
-    default:
-	printf("gl_ren_mthd: def_polything: null vertex type.\n");
-	break;
-    } /*switch(vertices->type)*/
-    
-}
-
 static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
     /*Use def_polything to get the image*/
     
     gl_gob *it;
     P_Renderer *self= (P_Renderer *)po_this;
     METHOD_IN
+
     if (! (RENDATA(self)->open)) {
 	METHOD_OUT
 	return((P_Void_ptr)0);
     }
 
     ger_debug("gl_ren_mthd: def_polyline\n");
-    
+
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
 	ger_fatal("def_polyline: unable to allocate %d bytes!", sizeof(gl_gob));
     
+    it->color_mode= LMC_COLOR;
+    it->obj= NULL;
+    it->cvlist= cache_vlist(self, vertices);
+#ifdef never
     makeobj( it->obj=genobj() );
     /*As of now, we're defining the object*/
     
     it->color_mode = LMC_COLOR;
+    it->cvlist= NULL;
+
     bgnline();
     def_polything(self, vertices);
     endline();
     closeobj();
+#endif
+
     METHOD_OUT
     return((P_Void_ptr)it);
 }
@@ -884,6 +1182,7 @@ static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
     /*As of now, we're defining the object*/
     
     it->color_mode = LMC_COLOR;
+    it->cvlist= NULL;
     bgnpolygon();
     def_polything(self, vertices);
     endpolygon();
@@ -912,6 +1211,7 @@ static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
     /*As of now, we're defining the object*/
     
     it->color_mode = LMC_COLOR;
+    it->cvlist= NULL;
 
     bgnline();
     def_polything(self, vertices);
@@ -941,6 +1241,7 @@ static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
     /*As of now, we're defining the object*/
 
     it->color_mode = LMC_COLOR;
+    it->cvlist= NULL;
 
     bgntmesh();
     def_polything(self, vertices);
@@ -982,6 +1283,7 @@ static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
 
   if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
       ger_fatal("def_bezier: unable to allocate %d bytes!", sizeof(gl_gob));
+  it->cvlist= NULL;
   
   switch (vertices->type) {
   case P3D_CVVVTX:
@@ -1103,6 +1405,7 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     if ( !(it= (gl_gob *)malloc(sizeof(gl_gob))))
 	ger_fatal("gl_ren_mthd: def_mesh: unable to allocate %d bytes!"
 		  , sizeof(gl_gob));
+    it->cvlist= NULL;
     
     makeobj( it->obj=genobj() );
     /*As of now, we're defining the object*/
@@ -1904,7 +2207,7 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      self->destroy_polymarker= destroy_object;
 
      self->def_polyline= def_polyline;
-     self->ren_polyline= ren_object;
+     self->ren_polyline= ren_polyline;
      self->destroy_polyline= destroy_object;
 
      self->def_polygon= def_polygon;
