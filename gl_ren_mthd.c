@@ -213,10 +213,10 @@ static GLubyte greyPattern[128]=
 
 /* Used in defining tori */
 #define rad .7071067811865 /*  square root of 2 all divided by 2  */
-static GLfloat knots[12] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
-static GLfloat bx[9] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
-static GLfloat by[9] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
-static GLfloat  w[9] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
+static GLfloat knots[] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
+static GLfloat bx[] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
+static GLfloat by[] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
+static GLfloat  w[] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
 #undef rad
 
 
@@ -251,10 +251,10 @@ static float initiallm[]={
 
 /* Used in defining tori */
 #define rad .7071067811865 /*  square root of 2 all divided by 2  */
-static double knots[12] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
-static double bx[9] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
-static double by[9] = {0., rad, 1.,rad, 0., -rad, -1., -rad, 0.};
-static double  w[9] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
+static double knots[] = {0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.};
+static double bx[] = {1., rad, 0.,-rad, -1., -rad, 0., rad, 1.};
+static double by[] = {0., rad, 1.,rad, 0., -rad, 1., -rad, 0.};
+static double  w[] = {1., rad, 1., rad,  1.,  rad, 1., rad, 1.};
 #undef rad
 
 /*So we don't have to realloc these EVERY TIME (primitive caching)*/
@@ -266,10 +266,15 @@ static short hastransparent;
 
 static int ren_seq_num= 0; /* counts gl renderers */
 
+
+/* Further definitions for torus nurbs */
+#define CIRCLE_NUMKNOTS (sizeof(knots)/sizeof(knots[0]))
+#define CIRCLE_NUMPTS (sizeof(bx)/sizeof(bx[0]))
+
 /*Definitions for cylinder nurbs*/
 
 #define CYL_NUMKNOTSX	4
-#define CYL_NUMKNOTSY	12
+#define CYL_NUMKNOTSY	20
 #define CYL_NUMCOORDS	3
 #define CYL_ORDERX      2
 #define CYL_ORDERY      6
@@ -1657,8 +1662,9 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 #ifdef USE_OPENGL
     if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
       gluBeginSurface( it->obj_info.nurbs_obj.ren );
-      gluNurbsSurface( it->obj_info.nurbs_obj.ren, 12, knots, 12, knots,  
-		       4,  4 * 9,  
+      gluNurbsSurface( it->obj_info.nurbs_obj.ren, CIRCLE_NUMKNOTS, knots, 
+		       CIRCLE_NUMKNOTS, knots,  
+		       4,  4 * CIRCLE_NUMPTS,  
 		       it->obj_info.nurbs_obj.data,  3,  3,  GL_MAP2_VERTEX_4);
       gluEndSurface( it->obj_info.nurbs_obj.ren );
     }
@@ -1667,8 +1673,8 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 
     if (it->obj_info.nurbs_obj) {
       bgnsurface();
-      nurbssurface(12,knots,12,knots,
-		   4*sizeof(double), 4*sizeof(double) * 9,
+      nurbssurface(CIRCLE_NUMKNOTS,knots,CIRCLE_NUMKNOTS,knots,
+		   4*sizeof(double), 4*sizeof(double) * CIRCLE_NUMPTS,
 		   it->obj_info.nurbs_obj, 3, 3, N_V3DR);
       endsurface();      
     }
@@ -2118,16 +2124,20 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
 	ger_fatal("def_torus: unable to allocate %d bytes!", 
 		  sizeof(gl_gob));
 #ifdef USE_OPENGL
-      if ( !(knot_data= (GLfloat*)malloc(9*9*4*sizeof(GLfloat))) )
+      if ( !(knot_data= 
+	     (GLfloat*)malloc(CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(GLfloat))) )
+	ger_fatal("def_torus: unable to allocate %d bytes!",
+		  CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(GLfloat));
 #else
-	if ( !(knot_data= (double*)malloc(9*9*4*sizeof(double))) )
-#endif
+	if ( !(knot_data= 
+	       (double*)malloc(CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(double))) )
 	  ger_fatal("def_torus: unable to allocate %d bytes!",
-		    9*9*4*sizeof(double));
+		    CIRCLE_NUMPTS*CIRCLE_NUMPTS*4*sizeof(double));
+#endif
 	
       runner= knot_data;
-      for(j=0;j<9;j++)  {
-	for(i=0;i<9;i++)  {
+      for(j=0;j<CIRCLE_NUMPTS;j++)  {
+	for(i=0;i<CIRCLE_NUMPTS;i++)  {
 	  *runner++= (minor * bx[j] + major * w[j]) * bx[i];
 	  *runner++= (minor * bx[j] + major * w[j]) * by[i];
 	  *runner++= minor * w[i] * by[j];
