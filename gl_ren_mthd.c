@@ -2295,14 +2295,18 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 	if (NPROCS(self)>1) {
 	  /* If NPROCS > 1, we can assume Chromium */
 	  glBarrierExecCR( BARRIER(self) );
-
-	  /* The crserver only executes the SwapBuffers() for the 0th client.
-	   * No need to test for rank==0 as we used to do.
-	   */
-	  if (MANAGE(self)) glSwapBuffersCR(0, 0);
 	}
-	if (MANAGE(self) && !chromium_in_use()) 
-	  glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
+	if (MANAGE(self)) {
+	  if (chromium_in_use()) {
+	    /* The crserver only executes the SwapBuffers() for the 0th client.
+	     * No need to test for rank==0 as we used to do.
+	     */
+	    glSwapBuffersCR(0, 0);
+	  }
+	  else {
+	    glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
+	  }
+	}
 #endif
 	glFlush();
 #else
