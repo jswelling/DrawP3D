@@ -9,9 +9,6 @@ LIBS += -lm
 all: ${BUILD_LIBS} ${BUILD_EXES}
 	@echo "Finished making ALL in " $(PWD)
 
-lint: c_tester.c $(SRC) $(PAINT_SRC) $(GL_SRC)
-	lint c_tester.c $(SRC)
-
 submakes:
 	@for i in dummy $(SUBMAKES) ; do \
 	if test $$i != dummy ; then (cd $$i ; make $f ); fi ; done
@@ -24,7 +21,7 @@ depend: subdepends
 	@echo Generating dependencies in $(PWD)
 	@echo '# Automatically generated on ' `date` > depend.mk.${ARCH}
 	makedepend -p${TOP}/obj/${ARCH}/ -fdepend.mk.${ARCH} -DMAKING_DEPEND \
-	  -- $(CFLAGS) -I${TOP} -- $(CSOURCE) $(CXXSOURCE)
+	  -- $(CFLAGS) -I${TOP} -- $(DEPENDSOURCE)
 
 objdir:
 	@echo "Creating object directory " $O
@@ -61,6 +58,13 @@ install:
 	-for i in dummy $(SUBMAKES) ; do \
 	if test $$i != dummy ; then (cd $$i ; make install ); \
 	else true ; fi ; done
+
+tarfile: $(CSOURCE) $(CXXSOURCE) $(FSOURCE) $(HFILES) $(DOCFILES) \
+		$(MISCFILES) 
+	if test ${PWD} == ${TOP} ; then rm /usr/tmp/drawp3d.tar ; fi
+	tar -cvf /usr/tmp/drawp3d.tar $^
+	-for i in dummy $(SUBMAKES) ; do \
+	if test $$i != dummy ; then (tar -rvf /usr/tmp/drawp3d.tar $$i ); fi ; done
 
 rcsclean:
 	rcsclean $(CSOURCE) $(HFILES) $(FSOURCE) $(OTHER_SOURCE) $(DOCS)

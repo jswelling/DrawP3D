@@ -216,6 +216,48 @@ endif
 skip_chromium:
 
 #
+# Check for FLTK- is it installed?
+#
+set has_fltk = 0
+set has_fltk_incl = 0
+set has_fltk_lib = 0
+foreach dirname ( /include /usr/include /usr/local/include \
+    /usr/statlocal/include /usr/freeware/include ${HOME}/include )
+  if ( -e ${dirname}/FL/Fl.H ) then
+    set has_fltk_incl = 1
+    set has_fltk_incl_dir = $dirname
+    break
+  endif
+end
+foreach dirname ( /lib /usr/lib /usr/local/lib \
+    /usr/statlocal/lib /usr/freeware/lib ${HOME}/lib )
+  if ( -e ${dirname}/libfltk.a ) then
+    set has_fltk_lib = 1
+    set has_fltk_lib_dir = $dirname
+    break
+  endif
+end  
+if ( $has_fltk_incl && $has_fltk_lib ) then
+  echo "FLTK support is present!"
+  set has_fltk = 1
+endif
+
+if ( $has_fltk ) then
+cat >> $ofile << %%EOF%%
+# The following lines cause the FLTK test executable to be built
+DEPENDSOURCE += \${FLTKSOURCE}
+BUILD_EXES += \${FLTK_EXES}
+CFLAGS += -I${has_fltk_incl_dir}
+LFLAGS += -L${has_fltk_lib_dir}
+
+%%EOF%%
+else
+  echo "FLTK test routines will not be compiled."
+endif
+
+skip_fltk:
+
+#
 # Check for Fortran- does Make know how to compile it?
 #
 set has_ftn = 0
@@ -233,16 +275,13 @@ rm tmp_config_ftn*
 if ( $has_ftn ) then
 cat >> $ofile << %%EOF%%
 # The following lines cause the Fortran test executables to be built
-BUILD_EXES += \$FTN_BUILD_EXES
+BUILD_EXES += \${FTN_BUILD_EXES}
 
 %%EOF%%
 else
   echo "Fortran test routines will not be compiled."
 endif
 
-# Check for fluid!
 # Check for Painter?
 # Make tori a little smarter about ren type
-# Quiet down make depend?
-# What about missing include files?
 # Why the strange lighting in GL?

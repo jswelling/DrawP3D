@@ -32,8 +32,9 @@ CSOURCE= ambient_mthd.c assist_attr.c assist.c assist_prim.c \
 	vector.c vrml_ren_mthd.c xdrawih.c xpainter.c xpnt_ren_mthd.c \
 	zsurface.c
 
-CXXSOURCE= fl_gl_interface.cxx fl_gl_stuff.cxx
-
+FLTKSOURCE= fl_gl_interface.cxx fl_gl_stuff.cxx
+CXXSOURCE += $(FLTKSOURCE)
+FLTK_EXES= $B/fl_gl_interface
 FSOURCE= f_tester.f drawp3d_def.f
 
 HFILES= assist.h FNAMES.h p3dgen.h sphere.h cr_applications.h \
@@ -66,6 +67,8 @@ LIB_OBJ= $O/ge_error.o $O/indent.o $O/c_vlist_mthd.o $O/f_vlist_mthd.o \
 	$O/p3d_ren_mthd.o $O/irreg_zsurf.o $O/irreg_isosf.o \
 	$O/tube_molecules.o $O/spline.o 
 
+DEPENDSOURCE= $(CSOURCE)
+
 # The configuration include file adds to the lists of objects and flags
 include ${TOP}/config.mk.${ARCH}
 
@@ -94,10 +97,17 @@ $B/tori: bindir $O/tori.o $L/libdrawp3d.a
 	@echo "Linking " $@
 	@$(CC) -o $@ ${LFLAGS} $O/tori.o -L$L -ldrawp3d $(LIBS)
 
-$B/autopaint_tester: $O/autopaint_tester.o $L/libdrawp3d.a
+$B/autopaint_tester: $O/autopaint_tester.o $L/libdrawp3d.a	
+	@echo "Linking " $@
 	@$(CC) -o $@ $O/autopaint_tester.o -L$L -ldrawp3d $(LIBS)
 
 $B/gl_ren_tester: $O/gl_ren_tester.o $L/libdrawp3d.a
-	$(CC) -o $@ $O/gl_ren_tester.o -L$L -ldrawp3d $(LIBS)
+	@echo "Linking " $@
+	@$(CC) -o $@ $O/gl_ren_tester.o -L$L -ldrawp3d $(LIBS)
+
+$B/fl_gl_interface: $O/fl_gl_interface.o $O/fl_gl_stuff.o $L/libdrawp3d.a
+	@echo "Linking " $@
+	@$(CXX) -o $@ ${LFLAGS} $O/fl_gl_interface.o $O/fl_gl_stuff.o \
+		-L$L -ldrawp3d -lfltk $(LIBS)
 
 include ${TOP}/rules.mk
