@@ -58,10 +58,12 @@ if ( ( ! ${?PVM_ROOT} ) || ( ! ${?PVM_ARCH} ) ) then
   set incl_pvm = 0
 endif
 
-if ( $incl_pvm && ( ( ! -e ${PVM_ROOT}/lib/libpvm3.a ) \
-  || ( ! -e ${PVM_ROOT}/include/pvm3.h ) ) ) then
-  echo "The PVM library and include files could not be found."
-  set incl_pvm = 0
+if ( $incl_pvm ) then
+    if ( ( ! -e ${PVM_ROOT}/lib/libpvm3.a ) \
+	|| ( ! -e ${PVM_ROOT}/include/pvm3.h ) ) then
+    echo "The PVM library and include files could not be found."
+    set incl_pvm = 0
+    endif
 endif
 
 if ( $incl_pvm ) then
@@ -193,7 +195,6 @@ foreach dirname ( /include /usr/include /usr/local/include \
     /usr/local/cr /usr/statlocal/include /usr/statlocal/cr \
     /usr/freeware/include /usr/freeware/cr ${HOME}/cr/include \
     ${HOME}/include )
-  echo "%%% Checking $dirname %%%"
   if ( -e ${dirname}/chromium.h ) then
     set incl_cr = 1
     break
@@ -231,8 +232,7 @@ rm tmp_config_ftn*
 
 if ( $has_ftn ) then
 cat >> $ofile << %%EOF%%
-# The following lines cause the GL renderer to support Chromium
-# for parallel rendering.
+# The following lines cause the Fortran test executables to be built
 BUILD_EXES += \$FTN_BUILD_EXES
 
 %%EOF%%
