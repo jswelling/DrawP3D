@@ -1,0 +1,163 @@
+<HTML>
+<HEAD><TITLE>DRAWP3D EXAMPLES</TITLE></HEAD>
+
+<BODY>
+<H1>DRAWP3D EXAMPLES</H1>
+
+Here are the example outputs. Except for example 12, the images you see were rendered using DRAWP3D's Open Inventor renderer, and viewed with ivview. Each example has links to their respective FORTRAN and C code, as well as a link to DRAWP3D's VRML-rendered version of the image (in 3D), which some of you may or may not be able to view. You can also click on an image to see it's normal size.
+
+<H4>Additional DRAWP3D documents:</H4>
+<UL>
+  <LI> <A HREF="drawp3d.html">DRAWP3D USER'S MANUAL</A>
+  <LI> <A HREF="c_ref.html">DRAWP3D C LANGUAGE REFERENCE GUIDE</A>
+  <LI> <A HREF="ftn_ref.html">DRAWP3D FORTRAN LANGUAGE REFERENCE GUIDE</A>
+</UL>
+
+<HR><BR>
+
+<A HREF="example_1.jpg">
+  <IMG SRC="example_1.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 1</B></P>
+  <P><A HREF="example_1.c">C CODE</A> ---
+  <A HREF="example_1.f">FORTRAN CODE</A> --- <A HREF="ex1.wrl">VRML version of image</A></P>
+  This example creates a white sphere which is viewed with the default
+  lights and camera.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_1.jpg">
+  <IMG SRC="example_1.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 2</B></P>
+  <P><A HREF="example_2.c">C CODE</A> ---
+  <A HREF="example_2.f">FORTRAN CODE</A> --- <A HREF="ex2.wrl">VRML version of image</A></P>
+  This example differs from example 1 in that we add explicit lights
+  and camera.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_3.jpg">
+  <IMG SRC="example_3.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 3</B></P>
+  <P><A HREF="example_3.c">C CODE</A> ---
+  <A HREF="example_3.f">FORTRAN CODE</A> --- <A HREF="ex3.wrl">VRML version of image</A></P>
+  In this example, we construct a ball-and-stick water molecule, using
+  the camera and lights developped in example 2 (Some of you may not
+  be able to see the thin blue line which connects the atoms).
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_3.jpg">
+  <IMG SRC="example_3.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 4</B></P>
+  <P><A HREF="example_4.c">C CODE</A> ---
+  <A HREF="example_4.f">FORTRAN CODE</A> --- <A HREF="ex4.wrl">VRML version of image</A></P>
+  This example takes the hydrogen atom produced in example 3 and produces
+  a number of frames with the atom in different orientations.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_5.jpg">
+  <IMG SRC="example_5.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 5</B></P>
+  <P><A HREF="example_5.c">C CODE</A> ---
+  <A HREF="example_5.f">FORTRAN CODE</A> --- <A HREF="ex5.wrl">VRML version of image</A></P>
+  This example uses the dp_isosurface function to produce an iso-valued
+  surface from 3D gridded data.  A bounding box shows the bounds of the
+  computational region.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_6.jpg">
+  <IMG SRC="example_6.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 6</B></P>
+  <P><A HREF="example_6.c">C CODE</A> ---
+  <A HREF="example_6.f">FORTRAN CODE</A> --- <A HREF="ex6.wrl">VRML version of image</A></P>
+  This example uses the dp_zsurface function to produce a height field
+  or z surface from a 2D array of data.  The dp_axis and dp_boundbox
+  routines are used to provide an axis and bounds for the surface.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_7.jpg">
+  <IMG SRC="example_7.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 7</B></P>
+  <P><A HREF="example_7.c">C CODE</A> ---
+  <A HREF="example_7.f">FORTRAN CODE</A> --- <A HREF="ex7.wrl">VRML version of image</A></P>
+  This example uses the dp_rand_zsurf function to produce a height field
+  or z surface from data points at random 2D locations.  The dp_boundbox
+  routine is used to provide bounds for the surface.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_8.jpg">
+  <IMG SRC="example_8.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 8</B></P>
+  <P><A HREF="example_8.c">C CODE</A> ---
+  <A HREF="example_8.f">FORTRAN CODE</A> --- <A HREF="ex8.wrl">VRML version of image</A></P>
+  This example uses the dp_rand_isosurf function to produce an isosurface
+  from data points at random 3D locations.  The dp_boundbox routine is 
+  used to provide bounds for the surface.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_9.jpg">
+  <IMG SRC="example_9.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 9</B></P>
+  <P><A HREF="example_9.c">C CODE</A> ---
+  <A HREF="example_9.f">FORTRAN CODE</A> --- <A HREF="ex9.wrl">VRML version of image</A></P>
+  This example places a cylinder between two given
+  points in space.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_10.jpg">
+  <IMG SRC="example_10.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 10</B></P>
+  <P><A HREF="example_10.c">C CODE</A> ---
+  <A HREF="example_10.f">FORTRAN CODE</A> --- <A HREF="ex10.wrl">VRML version of image</A></P>
+  This example uses the dp_irreg_zsurf function to produce a height 
+  field or z surface from a 2D array of data in polar coordinates.
+  The dp_axis and dp_boundbox routines are used to provide an axis
+  and bounds for the surface.
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_11.jpg">
+  <IMG SRC="example_11.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 11</B></P>
+  <P><A HREF="example_11.c">C CODE</A> ---
+  <A HREF="example_11.f">FORTRAN CODE</A> --- <A HREF="ex11.wrl">VRML version of image</A></P>
+  This example uses the dp_irreg_isosurf function to produce an iso-valued
+  surface from data on an irregular 3D grid (in this case in spherical
+  polar coordinates).
+<BR CLEAR=LEFT><BR>
+
+<A HREF="example_12.jpg">
+  <IMG SRC="example_12.jpg" ALIGN=LEFT HEIGHT=128 WIDTH=128 HSPACE=20>
+</A>
+  <P><B>EXAMPLE 12</B></P>
+  <P><A HREF="example_12.c">C CODE</A> (Has no FORTRAN CODE or VRML version of image)</P>
+  This example demonstrates how to use the XPainter renderer in a fairly
+  general way.  If called with the -a switch the windows produced are
+  automanaged;  otherwise Motif code in this program is activated to
+  create and manage the windows (the image shown was created with the latter
+  case).
+<BR CLEAR=LEFT><BR>
+
+
+<HR>
+<A HREF=/general/software/software.html><IMG ALT="PSC Software," SRC=/general/images/icons/software_button.gif></A>
+<A HREF=http://www.psc.edu/><IMG ALT="PSC Home Page" SRC="/general/images/icons/psc_home.gif"></A>
+<A HREF=/search/search.html><IMG SRC=/general/images/icons/search.gif  ALT="Search"></A> <A HREF=/general/feedback.html><IMG SRC=/general/images/icons/feedback.gif ALT="Feedback"></A>
+<HR>
+        
+<FONT SIZE=-1>
+<I><A HREF=/copyright.html>&#169;</A> Pittsburgh Supercomputing Center (PSC)<br>
+</I></FONT>
+<FONT SIZE=-2>
+<I>URL: http://www.psc.edu/general/software/packages/drawp3d/c_reference/croutines/dp_child.html</I>
+</FONT>
+
+</BODY>
+</HTML>

@@ -1,0 +1,2042 @@
+
+<TITLE>DRAWP3D FORTRAN LANGUAGE REFERENCE GUIDE</TITLE>
+<H1>DRAWP3D FORTRAN LANGUAGE REFERENCE GUIDE</H1>
+
+<UL>
+<LI> <A HREF="#INTRO">Introduction</A>
+<LI> <A HREF="#USAGE">Usage</A>
+<LI> <A HREF="#SPECIFY">Specifying Colors, Points, and Vectors</A>
+<LI> <A HREF="#VLIST">Vertex Lists</A>
+<LI> <A HREF="#PREOBS">Predefined Objects</A>
+<LI> <A HREF="#PARAM">Fortran Parameters Used by the DrawP3D Interface</A>
+<LI> <A HREF="#FUNC">Functions</A>
+<LI> <A HREF="#DESCRIP">Description of functions</A>
+</UL>
+
+<H4>Additional DRAWP3D documents:</H4>
+<UL>
+<LI> <A HREF="drawp3d.html">DRAWP3D USER'S MANUAL</A>
+<LI> <A HREF="c_ref.html">DRAWP3D C LANGUAGE REFERENCE GUIDE</A>
+<LI> <A HREF="example_ref.html">DRAWP3D EXAMPLES</A>
+</UL>
+
+<HR>
+
+<H2><A NAME="INTRO">Introduction</A></H2>
+
+This document gives the details of the Fortran language interface to
+DrawP3D.  It begins with general usage instructions, and includes
+detailed descriptions of predefined quantities and the function
+calling interface.<p>
+
+<H2><A NAME="USAGE">Usage</A></H2>
+
+The Fortran interface to DrawP3D uses a number of constants with
+special meanings.  These constants are defined using PARAMETER
+statements in the file drawp3d_def.f, which can be included in your
+code if your Fortran compiler supports file inclusion.  If not, you
+will have to insert the definitions manually or use the parameter
+values in place of the names.  These parameters will be written in
+upper case; they all begin with P and their values are given elsewhere
+in this document.  In general, when a constant is mentioned in this
+manual, it will be followed by its value in parenthesis, for example
+PTRUE (1).<p>
+
+Drawp3d_def.f also provides type statements for the functions of
+DrawP3D.  All are integer-valued functions, returning either PPASS (1)
+or PFAIL (0) depending on whether the function succeeded or failed for
+some reason.  Unless otherwise specified, all parameters are input
+only;  they are not modified by DrawP3D.<p>
+
+Compile the DrawP3D program as you would any Fortran program, and link it
+against the DrawP3D object library.  On Unix systems this will be done
+using a switch like -ldrawp3d on the appropriate command;  on VMS
+systems you will need to include drawp3d.olb.  These library names are
+system-dependent, so check to make sure the names are the same at your
+site.  <p>
+
+<H2><A NAME="SPECIFY">Specifying Colors, Points, and Vectors</A></H2>
+
+The Fortran interface to DrawP3D often requires the user to specify a
+<A HREF="drawp3d.html#COL">color</A> as a real array of dimension 4, or to specify a point or vector as
+a real array of dimension 3.  This is done in the obvious fashion.
+Consider COLOR, POINT, and VECTOR defined as follows:<p>
+<PRE>
+	REAL COLOR(4), POINT(3), VECTOR(3)
+</PRE>
+Then COLOR(1) through (4) will be the red, green, blue, and opacity
+components of the color respectively, and POINT(1) through POINT(3) or
+VECTOR(1) through VECTOR(3) will be the X, Y, and Z components of the
+point or vector respectively.<p>
+
+<H2><A NAME="VLIST">Vertex Lists</A></H2>
+
+In DrawP3D, a vertex must include a set of 3D coordinates.  It can
+also include a local normal vector and/or either a <A HREF="drawp3d.html#COL">color</A> or a scalar
+value to be mapped into a color by the current <A HREF="drawp3d.html#CMAP">color map</A> function.
+Some special functions provide for vertices with two scalar values
+(and no colors), although most functions will ignore this second
+value.  Considering all these cases, there are seven different
+possible collections of <A HREF="drawp3d.html#CORD">data for a vertex</A>.<p>
+
+Further, the color information given could be given in several color
+formalisms.  At the moment, the only one supported by DrawP3D is the
+red-green-blue-opacity color system, but support for others may be
+added in the future.<p>
+
+This collection of options means that every time a list of vertex data
+is given, you must specify what data is given for each vertex and what
+color system is to be used.  (Obviously we could have left out the
+color system selection, but we felt it would be best to leave it in so
+that codes written now would still work when more options are
+available).  These choices are needed every time you define a
+geometrical <A HREF="drawp3d.html#PRIM">primitive</A> that requires a list of vertices.<p>
+
+Each primitive creation function includes parameters for a vertex type
+and a color mode.  The possible vertex types are PCVX (0) (for
+coordinate-only vertices), PCCVX (1) (coordinates and colors), PCNVX
+(3) (coordinates and normals), PCCNVX(2) (coordinates, colors, and
+normals), PCVVX (4) (coordinates and values to be mapped to colors),
+PCVNVX (5) (coordinates, values, and normals), and PCVVVX (6)
+(coordinates and two values).  The option for color mode should be
+specified as PRGB (0), for the red-green-blue-opacity color
+specification scheme.<p>
+
+In the FORTAN language interface to P3D, functions requiring vertex
+data are passed three data arrays.  If there are N vertices to be
+defined, the first of these will be a real array of dimension (3,N)
+containing the X, Y, and Z coordinates of each vertex.  This array is
+generally called 'coords' in the function specifications in this
+document. <p>
+
+The second array can take three forms, depending on the vertex type
+the user passes.  If the vertex type requires a color, the array will
+be of dimension (4,N), and each entry will contain a red, a green, a
+blue, and an opacity value for that vertex.  These values are real
+between 0.0 and 1.0 inclusive, 1.0 being brightest or most opaque.  If
+the vertex type requires single scalar values to be mapped to colors
+by the current color map function, the array will be of dimension
+(1,N), and each real entry will be the value for that vertex.  If the
+vertex type requires two scalar values, the array will be of dimension
+(2,N), and each pair of real entries will be the values for that
+vertex.  The DrawP3D routines know enough to avoid confusing the two.
+This array is generally called 'colors' in the function
+specifications.<p>
+
+The third data array provides normal information for each vertex.  It
+is a real array of dimension (3,N), and each entry includes the X, Y,
+and Z components of that vertex.  This array is generally called norms
+in the function specifications. <p>
+
+Thus, different vertex list types require different data parameters.
+The correspondence between type and parameters is as follows:<p>
+<PRE>
+<B>vertex type</B>	<B>coords param</B>		<B>colors param</B>		<B>normals param</B>
+
+PCVX	        real coords(3,N) 	none			none
+PCCVX	        real coords(3,N) 	real colors(4,N)	none
+PCCNVX	        real coords(3,N) 	real colors(4,N)	real norms(3,N)
+PCNVX	        real coords(3,N) 	none			real norms(3,N)
+PCVVX	        real coords(3,N) 	real colors(1,N)	none
+PCVNVX	        real coords(3,N) 	real colors(1,N)	real norms(3,N)
+PCVVVX          real coords(3,N)	real colors(2,N)	none
+</PRE>
+
+Note that some vertex types do not require some of this data.  For
+example, vertices of type PCVX do not require either colors or normals.
+If the DrawP3D routines are called with vertex types which do not
+require a certain vertex data parameter, that parameter will never be
+used, so it is safe to substitute something like '0' for it in the
+parameter list.<p>
+
+<H2><A NAME="PREOBS">Predefined Objects</A></H2>
+
+<DL>
+<DT><B>standard_camera</B>
+<DD>A <A HREF="drawp3d.html#CAM">camera</A> looking toward the origin from
+a point 20.0 units up the Z axis, with
+the up direction lying along the Y axis.
+<p>
+
+<DT><B>standard_lights</B>
+<DD>A <A HREF="drawp3d.html#GOB">GOB</A> consisting of a positional <A HREF="drawp3d.html#LIGHT">light</A>
+GOB roat the point (0.0, 2.0, 20.0) and a weak
+ambient light.
+</DL> <p>
+
+<H2><A NAME="PARAM">Fortran Parameters Used by the DrawP3D Interface</A></H2>
+
+<DL>
+
+  <DT><B>Version numbers:</B>
+<DD><PRE>
+PPGENV 		1.0	Current version of P3DGen
+PDP3DV 		1.0	Current version of DrawP3D
+</PRE>
+
+  <DT><B>Return codes:</B>
+<DD><PRE>
+PPASS 		1	Function status return code
+PFAIL 		0	Function status return code
+</PRE>
+
+  <DT><B>Booleans:</B>
+<DD><PRE>
+PTRUE 		1	Boolean
+PFALSE 		0	Boolean
+</PRE>
+
+  <DT><B>Vertex types:</B>
+<DD><PRE>
+PCVX 		0	Vertices are coordinate only	
+PCCVX 		1	Vertices have coordinate, color
+PCCNVX 		2	Vertices have coordinate, color, normal
+PCNVX 		3	Vertices have coordinate, normal
+PCVVX 		4	Vertices have coordinate, value
+PCVNVX 		5	Vertices have coordinate, value, normal
+PCVVVX		6	Vertices have coordinates, two values
+</PRE>
+
+  <DT><B><A HREF="drawp3d.html#COL">Color</A> modes:</B>
+<DD><PRE>
+PRGB 		0	Color information is RGBA
+</PRE>
+
+  <DT><B>Predefined <A HREF="drawp3d.html#MAT">materials</A>:</B>
+<DD><PRE>
+PDFMAT		0	Default material (renderer dependent)
+PDULL		1	Dull material (e.g. paper)
+PSHINY		2	Shiny material (e.g. plastic, ceramic)
+PMETAL		3	Metallic material (e.g. chrome)
+PMATTE		4	Matte material (no reflection, e.g. soot)
+PALUM		5	Aluminum material (less shiny than chrome)
+</PRE>
+
+  <DT><B>Symbol name length:</B>
+<DD><PRE>
+PNAMELN 	64	Maximum length of names of objects
+</PRE>
+</DL>
+
+
+
+<H2><A NAME="FUNC">Functions</A></H2>
+
+
+DrawP3D's FORTRAN function names are lower case and begin with <B>p</B>. These functions must be
+declared as integers in your FORTRAN programs. We apologize for the inconvenience, but the
+letters between I and N are taken by other subroutine libraries. <p>
+
+All DrawP3D FORTRAN routines are integer-valued functions, returning either <B>1</B> (PPASS) or <B>0</B>
+(PFAIL), depending on whether the function succeeded or failed. <p>
+
+<DL>
+
+<DT><B><A NAME="GOB-RT"><A HREF="drawp3d.html#GOB">GOB</A> routines:</A></B>
+
+<DD><A HREF="#CHILD">pchild</A>
+<DD><A HREF="#CLOSE">pclose</A>
+<DD><A HREF="#CYL">pcyl</A>
+<DD><A HREF="#FREE">pfree</A>
+<DD><A HREF="#OPEN">popen</A>
+<DD><A HREF="#PRTGB">pprtgb</A>
+<p>
+
+<DT><B><A NAME="PRIM-RT"><A HREF="drawp3d.html#PRIM">Primitive</A> routines:</A></B>
+
+<DD><A HREF="#BEZP">pbezp</A>
+<DD><A HREF="#MESH">pmesh</A>
+<DD><A HREF="#PLYGN">pplygn</A>
+<DD><A HREF="#PLYLN">pplyln</A>
+<DD><A HREF="#PLYMK">pplymk</A>
+<DD><A HREF="#SPHR">psphr</A>
+<DD><A HREF="#TEXT">ptext</A>
+<DD><A HREF="#TORUS">ptorus</A>
+<DD><A HREF="#TRIST">ptrist</A>
+<p>
+
+<DT><B><A NAME="COMP-RT"><A HREF="drawp3d.html#COMP">Composite GOB</A> routines:</A></B>
+
+<DD><A HREF="#AXIS">paxis</A>
+<DD><A HREF="#BNDBX">pbndbx</A>
+<DD><A HREF="#IRISO">piriso</A>
+<DD><A HREF="#IRZSF">pirzsf</A>
+<DD><A HREF="#ISOSF">pisosf</A>
+<DD><A HREF="#RNISO">prniso</A>
+<DD><A HREF="#RNZSF">prnzsf</A>
+<DD><A HREF="#TUBEMOL">ptbmol</A>
+<DD><A HREF="#ZSURF">pzsurf</A>
+<p>
+
+<DT><B><A NAME="ATTR-RT"><A HREF="drawp3d.html#ATTR">Attribute</A> routines:</A></B>
+
+<DD><A HREF="#BKCUL">pbkcul</A>
+<DD><A HREF="#BLATT">pblatt</A>
+<DD><A HREF="#CLATT">pclatt</A>
+<DD><A HREF="#FATT">pfatt</A>
+<DD><A HREF="#GBCLR">pgbclr</A>
+<DD><A HREF="#GBMAT">pgbmat</A>
+<DD><A HREF="#IATT">piatt</A>
+<DD><A HREF="#MTATT">pmtatt</A>
+<DD><A HREF="#PTATT">pptatt</A>
+<DD><A HREF="#STATT">pstatt</A>
+<DD><A HREF="#TXTHT">ptxtht</A>
+<DD><A HREF="#TRATT">ptratt</A>
+<DD><A HREF="#VCATT">pvcatt</A>
+<p>
+
+<DT><B><A NAME="CMAP-RT"><A HREF="drawp3d.html#CMAP">Color map</A> routines:</A></B>
+
+<DD><A HREF="#STCMP">pstcmp</A>
+<DD><A HREF="#SDCMP">psdcmp</A>
+<p>
+
+<DT><B><A NAME="TRANS-RT"><A HREF="drawp3d.html#TRANS">Transformation</A> routines:</A></B>
+
+<DD><A HREF="#ASCAL">pascal</A>
+<DD><A HREF="#ROTAT">protat</A>
+<DD><A HREF="#SCALE">pscale</A>
+<DD><A HREF="#TNSFM">ptnsfm</A>
+<DD><A HREF="#TRANS">ptrans</A>
+<p>
+
+<DT><B><A NAME="CAM-RT"><A HREF="drawp3d.html#CAM">Camera</A> routines:</A></B>
+
+<DD><A HREF="#CAMRA">pcamra</A>
+<DD><A HREF="#CMBKG">pcmbkg</A>
+<DD><A HREF="#PRTCM">pprtcm</A>
+<p>
+
+<DT><B><A NAME="LIGHT-RT"><A HREF="drawp3d.html#LIGHT">Light source</A> routines:</A></B>
+
+<DD><A HREF="#AMBLT">pamblt</A>
+<DD><A HREF="#LIGHT">plight</A>
+<p>
+
+<DT><B><A NAME="REN-RT"><A HREF="drawp3d.html#REN">Renderer</A> routines:</A></B>
+
+<DD><A HREF="#CLSRN">pclsrn</A>
+<DD><A HREF="#INTRN">pintrn</A>
+<DD><A HREF="#OPNRN">popnrn</A>
+<DD><A HREF="#PRTRN">pprtrn</A>
+<DD><A HREF="#SHTRN">pshtrn</A>
+<DD><A HREF="#SNAP">psnap</A>
+<p>
+
+<DT><B><A NAME="DEBUG-RT">Debugging routines:</A></B>
+
+<DD><A HREF="#DEBUG">pdebug</A>
+<p>
+
+<DT><B><A NAME="SHUTDOWN-RT">Shutdown routines:</A></B>
+
+<DD><A HREF="#SHTDN">pshtdn</A>
+<p>
+
+</DL>
+
+
+<H2><A NAME="DESCRIP">Description of functions (in alphabetical order)</A></H2>
+
+<DL>
+
+<DT><H3><A NAME="AMBLT">pamblt</A></H3>
+
+  <DT>Purpose: <DD> Create an ambient <A HREF="drawp3d.html#LIGHT">light</A> <A HREF="drawp3d.html#PRIM">primitive</A> <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:
+	<DD>  pamblt( ctype, color );<p>
+
+	<DT>Parameters:
+	<DD>	ctype: integer color type (currently must be PRGB (0))<p>
+	<DD>	color: real array(4) containing color components<p>
+
+  <DT>Discussion:<DD>
+	This function adds an ambient light source to the current GOB.
+	The opacity component of the input color is ignored.<p>	
+
+
+<DT><H3><A NAME="ASCAL">pascal</A></H3>
+
+  <DT>Purpose:  <DD>Add an anisotropic scaling <A HREF="drawp3d.html#TRANS">transformation</A> to the current <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:
+
+	<DD>pascal( xscale, yscale, zscale );<p>
+
+	<DT>Parameters: 
+		<DD>xscale: real scaling factor in the current GOB's X direction<p>
+		<DD>yscale: real scaling factor in the current GOB's Y direction<p>
+		<DD>zscale: real scaling factor in the current GOB's Z direction<p>
+
+  <DT>Discussion:<DD>
+	This function adds an anisotropic scaling transformation to the
+	current GOB.  This transformation will be concatenated with the 
+	existing transformation by left multiplication;  GOBs with no 
+	existing transformation effectively have the identity transformation
+	associated with them.  To add a scaling transformation which
+	is uniform in all directions, see pscale.<p>
+
+
+<DT><H3><A NAME="AXIS">paxis</A></H3>
+
+  <DT>Purpose:  <DD>Add an axis gob to the current <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:<DD>
+
+        paxis( strt, end, up, strtvl, endvl, ntics, lbl, txtsz, precsn ); <p> 
+
+        <DT>Parameters:
+                <DD>strt: real array(3) point where axis starts<p>
+                <DD>end: real array(3) point where axis ends<p>
+                <DD>up: real array(3) up direction of text<p>
+                <DD>strtvl: real value to be placed at start<p>
+                <DD>endvl: real value to be placed at end<p>
+                <DD>ntics: integer value for the number of tics to be displayed.
+                             Includes end and start<p>
+                <DD>lbl: character string to be placed below startval<p>
+                <DD>txtsz: real value which gives the size of the text<p>
+                <DD>precsn: integer value for the number of decimal 
+                           points to be displayed (0..8)<p>
+
+  <DT>Discussion: <DD>
+        This function adds an axis to the Current GOB.  The axis itself is
+        in the (end-start) direction with the tics in the negative (up) 
+        direction.  The front of the axis is the cross product of (end-start) 
+        and (up).  Startval is placed at start and endval placed at end. 
+        Other values are interpolated and placed at the corresponding tics.  
+        The number of tics is specified, and this number includes the end 
+        and start tic.  If num_tics is less than 2, it is set to 2 by default. 
+        The label is placed below startval.  All text is scaled by text_size, 
+        which is exactly the same as in ptxtht().  The variable 
+        precision defines the number of decimal places to be displayed. 
+        This range is between 0 and 8, and if the range is exceeded, 
+        then precision is set to the nearest number that is within the range.<p>
+
+
+<DT><H3><A NAME="BEZP">pbezp</A></H3>
+
+  <DT>Purpose:  <DD>Create a nameless Bezier Patch <A HREF="drawp3d.html#PRIM">primitive</A> <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:<DD>
+
+	pbezp( vtxtyp, ctype, coords, colors, norms );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier constant<p>
+		<DD>ctype: integer color type (currently only P3D_RGB)<p>
+		<DD>coords: real array of coordinate data (16 vertices)<p>
+		<DD>colors: real array of color data<p>
+		<DD>norms: real array of normal data<p>
+
+  <DT>Discussion:<DD>
+	This produces a simple bicubic Bezier patch, with a four by
+	four pattern of knots specified by the data given by the 16
+	vertices.  See the section on vertex lists in this document
+	for format information.  The use of coloring information on
+	the inner four vertices is <A HREF="drawp3d.html#REN">renderer</A> dependent.<p>
+
+
+<DT><H3><A NAME="BKCUL">pbkcul</A></H3>
+
+  <DT>Purpose:<DD>  Add a backface culling <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:<DD>
+
+	pbkcul( flag );<p>
+
+	<DT>Parameters: 
+		<DD>flag: integer; turns backface culling on if non-zero, 
+		      off if zero<p>
+
+  <DT>Discussion:<DD>
+	Backface culling is a useful feature to save time by not drawing
+	hidden faces of closed objects.  It causes surfaces facing away
+	from the not to be drawn.  See the description of the various
+	<A HREF="drawp3d.html#PRIM">primitives</A> in the User's Guide for information on which surface
+	is the front of any given primitive.  This function adds the
+	this attribute to the currently open GOB, where it will apply
+	to that GOB and any of its descendents.<p>
+
+
+<DT><H3><A NAME="BLATT">pblatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary boolean-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:<DD>
+
+	pblatt( attrib, flag );<p>
+
+	<DT>Parameters:
+		<DD>attrib: character string specifying the attribute name<p>
+		<DD>flag: integer value of the attribute; non-zero means true<p>
+		
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary boolean
+	attribute to a GOB.<p>
+
+<DT><H3><A NAME="BNDBX">pbndbx</A></H3>
+
+  <DT>Purpose:<DD>  Create a nameless Bounding Box <A HREF="drawp3d.html#PRIM">primitive</A> <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:<DD>
+
+        pbndbx( crna, crnb );<p>
+ 
+	<DT>Parameters:
+                <DD>crna: real array(3) specifies one of the bounding box corners.<p>
+                <DD>crnb: real array(3) specifies the other bounding box corner.<p>
+
+  <DT>Discussion:<DD>
+        This procedure produces a bounding box. The two corners specify
+        opposite corners on the bounding box diagonal.<p>
+
+
+
+<DT><H3><A NAME="CAMRA">pcamra</A></H3>
+
+  <DT>Purpose:<DD>  Create a <A HREF="drawp3d.html#CAM">camera</A> object<p>
+
+  <DT>Use:<DD>
+
+	pcamra( name, lookfm, lookat, up, fovea, hither, yon );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name for the camera<p>
+		<DD>lookfm: real array(3) giving the location for the camera<p>
+		<DD>lookat: real array(3) giving the location at which to point
+			the camera<p>
+		<DD>up: real array(3) giving the vector specifying 
+		    the rotational position of the camera about the line 
+		    from lookfm to lookat<p>
+		<DD>fovea: real giving the opening angle of the view in degrees<p>
+		<DD>hither: negative real distance to the near clipping plane<p>
+		<DD>yon: negative real distance to the far clipping plane<p>
+
+  <DT>Discussion:<DD>
+	This procedure creates a camera object, which can be used to
+	specify a view of a model.  See the discussion of cameras in
+	the DrawP3D User's Guide for details.  Note that the hither
+	and yon values are negative numbers, with the magnitude of
+	hither less than that of yon.  Those objects which fall within
+	a cone of opening angle fovea with its base at lookfrom and
+	centered on lookat, and which fall between the hither and yon
+	distances, will be rendered by a psnap function using this
+	camera.<p>
+
+
+<DT><H3><A NAME="CHILD">pchild</A></H3>
+
+  <DT>Purpose:<DD>  Add a child <A HREF="drawp3d.html#GOB">GOB</A> to the current GOB.<p>
+
+  <DT>Use:<DD>
+
+	pchild( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the
+		      previously defined GOB to be added<p>
+
+  <DT>Discussion:<DD>
+	This function causes a previously defined GOB to become a
+	child of the current GOB.  Note that it can also be a child
+	of one or more other GOBs, and that it can (and will) have
+	children of its own.<p>
+	
+
+<DT><H3><A NAME="CLATT">pclatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary color-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pclatt( name, ctype, r, g, b, a );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>ctype: integer color type (currently must be PRGB (0))<p>
+		<DD>r: real red color intensity<p>
+		<DD>g: real green color intensity<p>
+		<DD>b: real blue color intensity<p>
+		<DD>a: real color opacity<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary color
+	attribute to a GOB.  Do not confuse this with setting the
+	color of the GOB, which is done with the function pgbclr
+	and involves setting the color attribute  named 'color'.<p>
+
+
+<DT><H3><A NAME="CLOSE">pclose</A></H3>
+
+  <DT>Purpose:<DD>  Close the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pclose();<p>
+
+	<DT>Parameters: none<p>
+
+  <DT>Discussion:<DD>
+	This function closes the current GOB.  If the current GOB is
+	a child of another open GOB, for example if it was opened by
+	calling popen with an empty character string for a name, the
+	parent open GOB becomes the current GOB.  If the current GOB
+	was opened by calling popen with a non-empty name, it must
+	be the highest level open GOB.  In this case when the GOB is
+	closed there will be no current GOB until the next call to
+	popen.<p>
+
+
+<DT><H3><A NAME="CLSRN">pclsrn</A></H3>
+
+  <DT>Purpose:<DD>  Close a <A HREF="drawp3d.html#REN">renderer</A>.<p>
+
+  <DT>Use:<DD>
+
+	pclsrn( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the renderer
+		      to be closed<p>
+
+  <DT>Discussion:<DD>
+	This function closes the named renderer.  It stays closed
+	until reopened with a call to popnrn.  While the renderer
+	is closed, it is not informed of snap functions, the creation
+	of new <A HREF="drawp3d.html#GOB">GOBs</A> or <A HREF="drawp3d.html#ATTR">attributes</A>, or anything else;  as far as the
+	renderer is concerned absolutely nothing happens while it is
+	closed.  This means that it is an error to, for example,
+	define a GOB while the renderer is closed and then open the
+	renderer and attempt to render the GOB.<p>
+
+
+<DT><H3><A NAME="CMBKG">pcmbkg</A></H3>
+
+  <DT>Purpose:<DD>  Set the background color of a <A HREF="drawp3d.html#CAM">camera</A> object.<p>
+
+  <DT>Use:<DD>
+
+	pcmbkg( name, ctype, color );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the camera 
+		      to be changed<p>
+		<DD>ctype: integer color type (currently must be PRGB (0))<p>
+		<DD>color: real array(4) containing color components<p>
+
+  <DT>Discussion:<DD>
+	This function changes the background color of a camera.  All
+	scenes subsequently rendered with the changed camera will have
+	backgrounds of the given color, unless and until the background 
+	color is changed again.  Cameras are created with a black
+	background color.<p>
+
+
+<DT><H3><A NAME="CYL">pcyl</A></H3>
+
+  <DT>Purpose:<DD>  Add a cylinder <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pcyl();<p>
+
+	<DT>Parameters: none<p>
+
+  <DT>Discussion:<DD>
+	This procedure adds a cylinder primitive to the current
+	GOB.  The cylinder is of radius 1.0, and extends from
+	the origin to the point (0.0, 0.0, 1.0).  It is expected
+	that the user will apply a <A HREF="drawp3d.html#TRANS">transformation</A> to it to
+	produce a cylinder of the desired shape in the desired
+	location.<p>
+
+<DT><H3><A NAME="DEBUG">pdebug</A></H3>
+
+  <DT>Purpose:<DD>  Toggle the debugging trace on and off.<p>
+
+  <DT>Use:<DD>
+
+	pdebug();<p>
+
+	<DT>Parameters: none<p>
+
+  <DT>Discussion:<DD>
+	DrawP3D can produce a debugging trace of its internal
+	operation.  The trace is written to the standard error
+	output;  it can be very verbose but can be useful for
+	debugging and bug reporting.  If no trace is being
+	produced pdebug turns it on;  if it is on pdebug
+	turns it off.<p>
+
+
+<DT><H3><A NAME="FATT">pfatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary floating point <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pfatt( name, value );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>value: real value to be associated with name<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary floating point
+	attribute to a GOB.<p>
+
+
+<DT><H3><A NAME="FREE">pfree</A></H3>
+
+  <DT>Purpose:<DD>  Free a named <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pfree( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the GOB to free<p>
+
+  <DT>Discussion:<DD>
+	This function explicitly removes the name from a named GOB.
+	If this GOB is not the descendent of another named GOB, it
+	will be freed, and all of its descendents which do not have
+	names and are not descendents of named GOBs will also be
+	freed.  The effect of this mechanism is that a GOB is freed
+	as soon as it becomes impossible to refer to it or any of
+	its ancestors.  Note that using popen to create a new
+	gob with the same name as an existing GOB has the effect
+	of applying pfree to the existing GOB.<p>
+
+
+<DT><H3><A NAME="GBCLR">pgbclr</A></H3>
+
+  <DT>Purpose:<DD>  Specify the gob color <A HREF="drawp3d.html#ATTR">attribute</A> of the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pgbclr( ctype, r, g, b, a );<p>
+
+	<DT>Parameters:
+		<DD>ctype: integer color type (currently must be PRGB (0))<p>
+		<DD>r: real red color intensity<p>
+		<DD>g: real green color intensity<p>
+		<DD>b: real blue color intensity<p>
+		<DD>a: real color opacity<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to set the gob color attribute
+	of a GOB.  This call is equivalent to calling pclatt with
+	the attribute name 'color' and the same color parameter.<p>
+
+
+<DT><H3><A NAME="GBMAT">pgbmat</A></H3>
+
+  <DT>Purpose:<DD>  Specify the gob <A HREF="drawp3d.html#MAT">material</A> <A HREF="drawp3d.html#ATTR">attribute</A> of the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pgbmat( material );<p>
+
+	<DT>Parameters:
+		<DD>material: integer ID of material<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to set the gob material attribute
+	of a GOB.  This call is equivalent to calling pmtatt with
+	the attribute name 'material' and the same material parameter.
+	The material ID must be one of the predefined materials,
+	described earlier in this document.<p>
+
+
+<DT><H3><A NAME="IATT">piatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary integer-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	piatt( name, value );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>value: integer value to be associated with name<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary integer
+	attribute to a GOB.<p>
+
+
+<DT><H3><A NAME="INTRN">pintrn</A></H3>
+
+  <DT>Purpose:<DD>  Create, initialize and open a <A HREF="drawp3d.html#REN">renderer</A>.<p>
+
+  <DT>Use:<DD>
+
+	pintrn( name, rndrer, device, data );<p>
+
+	<DT>Parameters:
+		<DD>name: character string name to be assigned to the new renderer<p>
+		<DD>rndrer: character string identifying the renderer<p>
+		<DD>device: character string specifying output device to
+			use (renderer-dependent meaning)<p>
+		<DD>data: character string specifying renderer data 
+		      string (renderer-dependent meaning)<p>
+
+  <DT>Discussion:<DD>
+	This function creates, initializes, and opens a renderer.
+	Some possible renderer types are P3D, Painter, Xpainter, GL,
+        PVM, Open Inventor, and VRML.<p>
+
+
+<DT><H3><A NAME="IRISO">piriso</A></H3>
+
+  <DT>Purpose:<DD>  Create an iso-valued surface <A HREF="drawp3d.html#COMP">composite GOB</A> from non-Cartesian
+            gridded data, for example data in spherical coordinates.<p>
+
+  <DT>Use:<DD>
+
+	piriso( int vtxtyp, data, vdata, nx, ny, nz, value,
+		crdfun, inside );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type to generate<p>
+		<DD>data: 3D real array of data, of dimensions (nx,ny,nz)<p>
+		<DD>vdata: 3D real array of value data for coloring, of
+		         dimensions (nx,ny,nz)<p>
+		<DD>nx, ny, nz: integer dimensions of data and valdata<p>
+		<DD>value: real value of the isosurface to extract<p>
+		<DD>crdfun: a subroutine used to map coordinate indices to
+			X-Y-Z (Cartesian) coordinates<p>
+		<DD>inside: integer flag to control whether inner or outer
+		        surfaces are drawn<p>
+
+  <DT>Discussion:<DD>
+
+	The irregular isosurface composite function is used to extract
+	a surface of constant value from a three dimensional array of
+	real data.  The best way to understand what this means is to
+	think of a continuous function in three dimensional space.
+	Consider all the points in space for which the function has a
+	given value.  Because the function is continuous, the points
+	must group together to form two dimensional closed surfaces in
+	space.  These surfaces are iso-valued surfaces, or
+	isosurfaces, of the continuous function.<p>
+
+	The isosurface function assumes that the grid of data that it
+	is passed represents samples of a continuous function in
+	space, and extracts the isosurface of that function at a given
+	function value.  Linear interpolation of the data is used to
+	calculate values between grid points.  The surfaces formed are
+	closed unless they intersect the boundary of the grid; in that
+	case the parts of the surface that would fall outside are
+	omitted and holes are left in the surface.<p>
+
+	The data parameter and its nx, ny, and nz dimensions provide
+	the data for the 3D grid.  The subroutine crdfun establishes
+	the relationship between indices within that grid and X-Y-Z
+	(Cartesian) coordinates.  It should be defined as follows:<p>
+<PRE>
+	subroutine crdfun( x, y, z, i, j, k )
+	integer i, j, k
+	real x, y, z
+</PRE>
+	The function will be called with i, j, and k being integers
+	in the range of 1 to nx, 1 to ny, and 1 to nz respectively.
+	When called from Fortran, piriso assumes the grid data arrays
+	to be in Fortran array order and accesses the array as data(i,j,k).<p>
+
+	The value parameter provides the constant value of the
+	isosurface.  The inside parameter controls whether inner
+	or outer surfaces are drawn.  The outer surface is that for
+	which function values above the surface value lie inside the
+	surface; inner surfaces are drawn such that higher function
+	values lie outside.  The distinction controls which direction
+	the 'front' sides of the polygons of the surface are facing.<p>
+
+	The two remaining parameters, vtxtype and valdata, control the
+	appearance of the surface.  This routine does not support the
+	generation of normals based on gradient direction, so vertex
+	types including normals are mapped to the most similar vertex
+	type not including normals.  Most <A HREF="drawp3d.html#REN">P3D renderers</A> will generate
+	normals based on polygon facing direction later in the rendering
+	process.  The supported vertex types are PCVX and PCVVX.
+	For the PCVVX type, the vdata parameter provides value data
+	which is interpolated to the isosurface and used to color the
+	surface according to the current <A HREF="drawp3d.html#CMAP">color map</A>.<p>
+
+	See the documentation for pisosf for information on the
+	algorithm used to extract the isosurface and other comments.<p>
+
+
+<DT><H3><A NAME="IRZSF">pirzsf</A></H3>
+
+  <DT>Purpose:<DD>  Create a Z surface <A HREF="drawp3d.html#COMP">composite GOB</A> from non-Cartesian gridded
+            data, for example from polar coordinates.<p>
+
+  <DT>Use:<DD> 
+	
+	pirzsf( vtxtyp, zdata, vdata, nx, ny, crdfun, tstflg, tstfun );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type to generate<p>
+		<DD>zdata: an nx by ny array of floats specifying z values<p>
+		<DD>vdata: an nx by ny array of floats specifying values
+   		       for coloring via the current color map<p>
+		<DD>nx, ny: dimensions of zdata and vdata<p>
+		<DD>crdfun: a subroutine used to map coordinate indices to
+			X-Y (Cartesian) coordinates<p>
+                <DD>tstflg: integer flag set to non-zero if tstfun is 
+					provided<p>
+		<DD>tstfun: a subroutine that excludes points from the 
+   			Z surface.<p>
+
+  <DT>Discussion:<DD>
+
+	This function draws a surface, the height of which is given by
+	the data in the array zdata.  Nx and ny specify the dimensions
+	of the zdata and vdata (if present) arrays.  When called from
+	Fortran, these data arrays are accessed in Fortran order, as 
+	zdata(i,j).<p>
+
+	The subroutine crdfun is used to map vertex indices to X-Y
+	(Cartesian) coordinates.  It should be defined as follows:<p>
+<PRE>
+	subroutine crdfun( x, y, i, j )
+	real x, y
+	integer i, j
+</PRE>
+	The function will be called with i and j ranging from 1 to nx
+	and from 1 to ny respectively, and should set x and y to equal
+	the X and Y (Cartesian) coordinates of the given data point.
+	Thus crdfun serves to define the domain of the Z surface,
+	while zdata serves to define the range.<p>
+
+	The parameter vtxtyp specifies the vertex type to be used.
+	Supported vertex types are PCVX and PCVVX.  For PCVVX, the
+	user must supply a non-null array vdata.  The values in this
+	array will be mapped via the current <A HREF="drawp3d.html#CMAP">color map</A> to provide
+	coloring for the surface vertices.<p>
+
+	tstfun is an optional user supplied subroutine that determines
+        whether a point should be excluded from the zsurface.  If it
+        is not provided tstflg should be set to zero.  If it is provided,
+        tstflg should be non-zero and tstfun should be
+	defined as follows:<p>
+<PRE>
+	subroutine tstfun( ixclde, value, i, j )
+	integer ixclde, i, j
+	real value
+</PRE>
+	This function is called for each point in the surface, with
+	value set to the z value at that point and i and j to the
+	array indices (between 1 and nx and 1 and ny respectively) of
+	the point in question.  If on return from the function ixclde
+	is PTRUE (1), the point will be excluded and a hole will be
+	left in the surface at the appropriate point.  If ixclde is
+	PFALSE (0), the point will be included.  This enables the user
+	to remove points on the basis of position or value.<p>
+
+
+<DT><H3><A NAME="ISOSF">pisosf</A></H3>
+
+  <DT>Purpose:<DD>  Create an iso-valued surface <A HREF="drawp3d.html#COMP">composite GOB</A><p>
+
+  <DT>Use:<DD>
+
+	pisosf( vtxtyp, data, vdata, nx, ny, nz, value, 
+	        crnr1, crnr2, inside );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type to generate<p>
+		<DD>data: 3D real array of data, of dimensions (nx,ny,nz)<p>
+		<DD>valdata: 3D real array of value data for coloring, of
+		         dimensions (nx,ny,nz)<p>
+		<DD>nx, ny, nz: integer dimensions of data and valdata<p>
+		<DD>value: real value of the isosurface to extract<p>
+		<DD>crnr1: real array(3) specifying one corner of the volume
+		       in which to draw the surface<p>
+		<DD>crnr2: real array(3) specifying the other corner<p>
+		<DD>inside: integer flag to control whether inner or outer
+		             surfaces are drawn<p>
+
+  <DT>Discussion:<DD>
+	The isosurface composite function is used to extract a surface
+	of constant value from a three dimensional array of real data.
+	The best way to understand what this means is to think of a
+	continuous function in three dimensional space.  Consider all
+	the points in space for which the function has a given value.
+	Because the function is continuous, the points must group
+	together to form two dimensional closed surfaces in space.
+	These surfaces are iso-valued surfaces, or isosurfaces, of the
+	continuous function.<p>
+
+	pisosf assumes that the grid of data that it is passed forms
+	samples of a continuous function in space, and extracts the
+	isosurface of that function at a given function value.  Linear
+	interpolation of the data is used to calculate values between
+	grid points.  The surfaces formed are closed unless they
+	intersect the boundary of the grid; in that case the parts of
+	the surface that would fall outside are omitted and holes are
+	left in the surface.<p>
+
+	The data parameter and its nx, ny, and nz dimensions provide
+	the data for the 3D grid, which is assumed to fill the space
+	defined by the opposite corners corner1 and corner2.  The
+	value parameter provides the constant value of the isosurface.<p>
+
+	The inside parameter controls whether inner or outer surfaces
+	are drawn.  The outer surface is that for which function
+	values above the surface value lie inside the surface; inner
+	surfaces are drawn such that higher function values lie
+	outside.  The distinction controls which direction the 'front'
+	sides of the polygons of the surface are facing.<p>
+
+	The two remaining parameters, vtxtyp and vdata, control the
+	appearance of the surface.  If the vertex type is one which
+	includes normal vectors, normals will be generated; this makes
+	the surface look smoother but substantially increases the
+	memory and file size of the model and takes time to compute.
+	If a vertex type requiring value information is given, the
+	grid of value data is accessed at appropriate points (using
+	linear interpolation as necessary), and the current <A HREF="drawp3d.html#CMAP">color map</A>
+	is used to color the surface appropriately.  Vertex types
+	implying that explicit colors are to be given for the vertices
+	are converted to the most similar type without explicit
+	colors.<p>
+
+	The algorithm used is Lorensen and Cline's Marching Cubes
+	algorithm, as described in the proceedings of Siggraph '87,
+	with several corrections.  See the source code for details.<p>
+
+	See the routine pbndbx for an easy way to show the boundaries
+	of the volume from which the surface is being extracted.<p>
+
+	This routine involves the correct handling of a large number
+	of distinct cases.  We believe that all the cases are properly
+	coded, but errors may exist.  If you encounter a case where
+	the algorithm seems to create an incorrect surface,
+	particularly one with missing triangles or holes not at the
+	boundary of the volume specified by the corners, please let us
+	know so that we can make the appropriate corrections.<p>
+
+
+<DT><H3><A NAME="LIGHT">plight</A></H3>
+
+  <DT>Purpose:<DD>  Create a positional <A HREF="drawp3d.html#LIGHT">light</A> source <A HREF="drawp3d.html#PRIM">primitive</A> <A HREF="drawp3d.html#GOB">GOB</A><p>
+
+  <DT>Use:<DD>
+
+	plight( loc, ctype, color );<p>
+
+	<DT>Parameters: 
+		<DD>loc: real array (3) giving the position of the light source.<p>
+		<DD>ctype: integer color type (currently must be PRGB (0))<p>
+		<DD>color: real array(4) giving the color for the light source.<p>
+
+  <DT>Discussion:<DD>
+	This procedure is used to add a positional light source primitive
+	to the currently open GOB.  The opacity component of the input
+	color is ignored.  The <A HREF="drawp3d.html#REN">renderer</A> may retreat the light source
+	to infinity, or otherwise neglect some of the light source
+	data.<p>
+
+
+<DT><H3><A NAME="MESH">pmesh</A></H3>
+
+  <DT>Purpose:<DD>  This function adds a generalized mesh geometrical
+	    <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pmesh( vtxtyp, ctype, npts, coords, colors, norms, nfacet,
+	       faclng, vrtind );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type<p>
+		<DD>ctype: integer color type (currently must be PRGB (0))<p>
+		<DD>npts: integer number of vertices<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>colors: real array of color data<p>
+		<DD>norms: real array of normal data<p>
+		<DD>nfacet: integer number of facets<p>
+		<DD>faclng: integer array of facet length data<p>
+		<DD>vrtind: integer array of facet vertex index data
+		       (numbered from 0)<p>
+
+  <DT>Discussion:<DD>
+	The general mesh is one of the most useful primitives, but
+	also one of the more complex.  It consists of a collection
+	of polygonal facets, sharing a common collection of vertices.
+	The first five parameters to pmesh define the vertices
+	(in the usual fashion- see the section on vertex lists in
+	this document), while the remainder of the parameters define
+	how they are grouped to form the facets.<p>
+
+	If there are nfacet facets, faclng must be an array
+	of length nfacets containing the number of vertices in each
+	facet.  vrtind must be an array of total length equal
+	to the sum of the values in faclng, containing indices
+	into the array of vertices specified by vdata.  The first
+	element of facet_lengths specifies a number of entries to
+	be taken from facet_vertices to define the first facet, the
+	second element specifies the number of entries to define the
+	second facet, and so on.  NOTE: Vertex indices in vrtind
+	number the vertices from 0, as is the C language custom,
+	rather than from 1, as is the Fortran custom.  The front 
+	faces of the facets are defined by the right hand rule 
+	applied to the vertices in the order in which their indices 
+	appear in facet_vertices.  This means that the facets of a 
+	smooth surface do not necessarily all have their front faces 
+	on the same side of the surface.<p>
+	
+
+<DT><H3><A NAME="MTATT">pmtatt</A></H3>
+
+  <DT>Purpose:<DD>  Add a <A HREF="drawp3d.html#MAT">material</A>-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pmtatt( name, material );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>material: integer ID of material<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary material
+	attribute to a GOB.  Do not confuse this with setting the
+	material of the GOB, which is done with the function pgbmat
+	and involves setting the material attribute  named 'material'.
+	The material ID must be one of the predefined materials,
+	described earlier in this document.<p>
+
+
+<DT><H3><A NAME="OPEN">popen</A></H3>
+
+  <DT>Purpose:<DD>  Create and open a new named or unnamed <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	popen( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string given the name for the new 
+		      GOB, or ' ' for a nameless GOB<p>
+
+  <DT>Discussion:<DD>
+	All non-<A HREF="drawp3d.html#PRIM">primitiv</A>e GOBs are created and opened using popen
+	and closed using pclose.  If popen is called with a 
+	non-empty name, a named GOB is created.  This can only happen
+	if no GOB is currently open.  If popen is called with an
+	empty character string ('') or a character string containing
+	only a single space (' ') as a parameter, a nameless GOB
+	is created.  This can only happen if another GOB is already
+	open;  the new GOB becomes a child of the previously open GOB.<p>
+
+
+<DT><H3><A NAME="OPNRN">popnrn</A></H3>
+
+  <DT>Purpose:<DD>  Open a previously closed <A HREF="drawp3d.html#REN">renderer</A>.<p>
+
+  <DT>Use:<DD>
+
+	popnrn( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the renderer
+		      to reopen<p>
+
+  <DT>Discussion:<DD>
+	This routine opens a renderer previously closed using
+	dclsrn.  It is not necessary to open a renderer
+	immediately after it is created by pinirn, since
+	renderers are created open.  Note that any definitions,
+	<A HREF="drawp3d.html#ATTR">attributes</A>, snaps, or other changes are ignored by the
+	renderer while it is closed.  Thus it is an error to
+	define a <A HREF="drawp3d.html#GOB">GOB</A> while a renderer is closed, open the renderer, 
+	and then attempt to render that GOB.<p>
+
+
+<DT><H3><A NAME="PLYGN">pplygn</A></H3>
+
+  <DT>Purpose:<DD>  Add a polygon geometrical <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pplygn( vtxtyp, ctype, npts, coords, colors, norms );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier<p>
+		<DD>ctype: integer color type (currently must be PRGB)<p>
+		<DD>npts: integer number of vertices<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>colors: real array of color data<p>
+		<DD>norms: real array of normal data<p>
+
+  <DT>Discussion:<DD>
+	This function adds a polygon bounded by the given vertices to
+	the current GOB.  See the vertex list section of this document
+	for a description of the vertex data format.  It is the user's 
+	responsibility to make sure that the vertices given are coplanar.
+	The handling of concave polygons is <A HREF="drawp3d.html#REN">renderer</A>-dependent.  The
+	handling of self-intersecting polygons is very renderer-dependent
+	and should be avoided if at all possible.  The front face of the
+	polygon is determined by applying the right hand rule to the
+	circulation direction of the vertices.<p>
+
+
+<DT><H3><A NAME="PLYLN">pplyln</A></H3>
+
+  <DT>Purpose:<DD>  Add a polyline geometrical <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pplyln( vtxtyp, ctype, npts, coords, colors );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier<p>
+		<DD>ctype: integer color type (currently must be PRGB)<p>
+		<DD>npts: integer number of vertices<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>colors: real array of color data<p>
+
+  <DT>Discussion:<DD>
+	This function adds a polyline defined by the given vertices to
+	the current GOB.  See the vertex list section of this document
+	for a description of the vertex data format.  Since normal 
+	vectors are not applicable to the drawing of polylines, they 
+	are not included in the parameter list.  Vertex types including
+	normals are converted to the otherwise similar type without
+	normals.<p>
+
+<DT><H3><A NAME="PLYMK">pplymk</A></H3>
+
+  <DT>Purpose:<DD>  Add a polymarker geometrical <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pplymk( vtxtyp, ctype, npts, coords, colors );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier<p>
+		<DD>ctype: integer color type (currently must be PRGB)<p>
+		<DD>npts: integer number of vertices<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>colors: real array of color data<p>
+
+  <DT>Discussion:<DD>
+	This function adds a polymarker defined by the given vertices to
+	the current GOB.  See the vertex list section of this document
+	for a description of the vertex data format.  At the moment,
+	DrawP3D only supports point markers.  Since normal vectors
+	are not applicable to the drawing of polylines, they are not
+	included in the parameter list.  Vertex types including
+	normals are converted to the otherwise similar type without
+	normals.<p>
+
+
+<DT><H3><A NAME="PRTCM">pprtcm</A></H3>
+
+  <DT>Purpose:<DD>  Write a description of a <A HREF="drawp3d.html#CAM">camera</A> to the standard output.<p>
+
+  <DT>Use:<DD>
+
+	pprtcm( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the camera 
+		      to be written out<p>
+
+  <DT>Discussion:<DD>
+	This routine causes a description of the given camera, including
+	all internal parameters, to be written to the standard output.
+	This can be very useful for debugging purposes.<p>
+
+
+<DT><H3><A NAME="PRTGB">pprtgb</A></H3>
+
+  <DT>Purpose:<DD>  Write a description of a <A HREF="drawp3d.html#GOB">GOB</A> to the standard output.<p>
+
+  <DT>Use:<DD>
+
+	pprtgb( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the GOB 
+		      to be written out<p>
+
+  <DT>Discussion:<DD>
+	This routine causes a hierarchical description of the given GOB
+	to be written to the standard output.  This description includes
+	all of the GOB's <A HREF="drawp3d.html#ATTR">attributes</A>, its <A HREF="drawp3d.html#TRANS">transformation</A> if any, and
+	all of its children recursively, down to and including any
+	<A HREF="drawp3d.html#PRIM">primitive</A> GOBs.  This can be very useful for debugging purposes.<p>
+
+
+<DT><H3><A NAME="PRTRN">pprtrn</A></H3>
+
+  <DT>Purpose:<DD>  Write a description of a <A HREF="drawp3d.html#REN">renderer</A> to the standard output.<p>
+
+  <DT>Use:<DD>
+
+	pprtrn( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the renderer
+		      to be written out<p>
+
+  <DT>Discussion:<DD>
+	This routine causes a description of the given renderer, 
+	including output file and parameter information, to be 
+	written to the standard output.  This can be very useful
+	for debugging purposes.<p>
+
+
+<DT><H3><A NAME="PTATT">pptatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary point-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pptatt( name, x, y, z );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>x: real x coordinate of the point<p>
+		<DD>y: real y coordinate of the point<p>
+		<DD>z: real z coordinate of the point<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary point
+	attribute to a GOB.<p>
+
+
+<DT><H3><A NAME="RNISO">prniso</A></H3>
+
+  <DT>Purpose:<DD>  Create an iso-valued surface <A HREF="drawp3d.html#COMP">composite GOB</A> from randomly 
+            distributed data.<p>
+
+  <DT>Use:<DD>
+
+	prniso( vtxtyp, ctype, npts, coords, vals, norms, value, inside );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier<p>
+		<DD>ctype: integer color type (currently must be PRGB)<p>
+		<DD>npts: integer number of vertices<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>vals: real array of value data (as for vertex list 'colors')<p>
+		<DD>norms: real array of normal data<p>
+		<DD>value: real value at which the isosurface is to be drawn<p>
+		<DD>inside: integer flag to control whether inner or outer
+		        surfaces are drawn<p>
+
+  <DT>Discussion:<DD>
+
+	The random isosurface composite function is used to extract a
+	surface of constant value from a collection of data points in
+	3D space.  The data may be (and in fact should be) ungridded;
+	it need not be defined on a regular array.<p>
+
+	The best way to understand isosurfaces is to think of a
+	continuous function in three dimensional space.  Consider all
+	the points in space for which the function has a given value.
+	Because the function is continuous, the points must group
+	together to form two dimensional closed surfaces in space.
+	These surfaces are iso-valued surfaces, or isosurfaces, of the
+	continuous function.  The data points given provide function
+	values at various points within the space.  The random
+	isosurface utility finds a function which has the given values
+	at the given points and is linearly interpolated between them,
+	and extracts an isosurface of that function.  The surfaces
+	formed are closed unless they intersect the convex hull of the
+	given data; in that case the parts of the surface that would
+	fall outside are omitted and holes are left in the surface.<p>
+
+	The data values are provided to the function in the form of a
+	vertex list.  Each point must have three coordinates, and a
+	value to provide the local value of the function defining the
+	isosurface.  It is also possible to specify a second value.
+	In this case, the second value will be used to color the
+	surface according to the current <A HREF="drawp3d.html#CMAP">color map</A>.  Normals may also
+	be provided and will be interpolated, but this is not a very
+	sensible thing to do unless the normals are known to be
+	perpendicular to the surface which is generated.  (This will
+	be the case if the normals given correspond to the gradient of
+	the function in question).  These combinations of possible
+	vertex quantities mean that the valid vertex types are PCVVX,
+	PCVVVX, and PCVNVX.<p>
+
+	The inside parameter controls whether inner or outer surfaces
+	are drawn.  The outer surface is that for which function
+	values above the surface value lie inside the surface; inner
+	surfaces are drawn such that higher function values lie
+	outside.  The distinction controls which direction the 'front'
+	sides of the polygons of the surface are facing.<p>
+
+	The isosurface is generated by first finding the Dirichlet and
+	Delaunay tesselations of the data points, and then using the
+	Delaunay tesselation to define a lattice of tetrahedra, the
+	vertices of which are the given data points.  A 'Marching
+	Tets' algorithm is applied to these tetrahedra to extract the
+	isosurface.  Value data for coloring or interpolated normal
+	data are calculated by linear interpolation along the edges of
+	the tetrahedra as needed.  Note that the result is unique;
+	there are no hidden free parameters the adjustment of which
+	might produce a different isosurface from the same data.<p>
+
+	The algorithm used to calculate the Dirichlet and Delaunay
+	structures if that of A. Bowyer (see The Computer Journal,
+	vol.  24, no. 2, 1981).  The process is very compute intensive
+	and uses a great deal of memory; generating isosurfaces for
+	large numbers of data points is a very memory-intensive and
+	time-consuming task.  Thus it is much better to use
+	pisosf or piriso if at all possible.<p>
+
+
+<DT><H3><A NAME="RNZSF">prnzsf</A></H3>
+
+  <DT>Purpose:<DD>  Create a Z surface <A HREF="drawp3d.html#COMP">composite GOB</A> from randomly distributed data<p>
+
+  <DT>Use:<DD> 
+
+	prnzsf( vtxtyp, ctype, npts, coords, colors, norms, tfnull, tfun );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier constant<p>
+		<DD>ctype: integer color type (currently only P3D_RGB)<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>colors: real array of color data<p>
+		<DD>norms: real array of normal data<p>
+	   	<DD>tfnull: integer: if PTRUE, then include all points<p>
+		<DD>tfun: a subroutine that excludes points from the 
+   			Z surface.<p>
+
+  <DT>Discussion:<DD>
+
+	This function connects the given data points to form a surface.
+	The given points must form a continuous, single-valued surface in
+	z as a function of x and y.  The surface drawn is bounded in the
+	x-y plane by the convex hull of the data points.  All vertex
+	types are supported; normal, color, or value data associated with
+	the vertices is used to properly color or <A HREF="drawp3d.html#LIGHT">light</A> the surface
+	created.  For example, vertices of type P3D_CVVTX could be used
+	to color the surface according to a function different from its
+	height.<p>
+
+	The user can cause points to be excluded from the surface by
+	setting tfnull to PFALSE (0), and specifying a subroutine tfun
+	to be used in determining which points to exclude.  If tfnull
+	is PTRUE (1), all points will be included in the surface and
+	the parameter tfun will be ignored.  Excluding a point causes
+	a hole to appear in the surface where the point would have been.<p>
+
+	Tfun is a user supplied subroutine that determines whether a
+	point should be excluded from the zsurface.  It should be
+	defined as follows:<p>
+<PRE>
+	subroutine tfun( ixclde, x, y, z, index )
+	integer ixclude, index
+	real x, y, z
+</PRE>
+	This function is called several times for each point in the data,
+	with the x, y, and z parameters being passed the coordinates of
+	the data point and the index being passed the ordinal index of
+	the given point in the data.  NOTE THAT THE INDICES ARE NUMBERED
+	FROM 0, rather than from 1 as would be traditional in Fortran.
+	If on return from the function ixclde is PTRUE (1), the point
+	will be excluded and a hole will be left in the surface at the
+	appropriate point.  If ixclde is PFALSE (0), the point will be
+	included.  This enables the user to remove points on the basis of
+	position or value.<p>
+
+	The connections between points which define the surface are found
+	by calculating the Dirichlet tesselation of the points.  This
+	process divides the space in the x-y plane into regions closest
+	to each of the given points.  These regions are polygons; the
+	collection of polygons is the Dirichlet tesselation.  The dual to
+	this set of polygons is a collection of triangles which have the
+	given data points as their vertices.  These triangles make up the
+	Delaunay triangulation of the data and are what is actually drawn
+	to create the Z surface.  The convex hull of the data is
+	automatically calculated during the generation of the Delaunay
+	triangulation.  The triangulation calculated is completely
+	unambiguous; no hidden free parameters are used to choose which
+	data points are connected to which.<p>
+
+	The algorithm used to calculate the Dirichlet and Delaunay
+	structures if that of A. Bowyer (see The Computer Journal,
+	vol.  24, no. 2, 1981).  The process is very compute intensive
+	and uses a great deal of memory; generating Z surfaces for
+	large numbers of data points is a very memory-intensive and
+	time-consuming task.  Thus it is much better to use pzsurf
+	pirzsf if at all possible.<p>
+
+
+<DT><H3><A NAME="ROTAT">protat</A></H3>
+
+  <DT>Purpose:<DD>  Add a rotation <A HREF="drawp3d.html#TRANS">transformation</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	protat( x, y, z, angle );<p>
+
+	<DT>Parameters:
+		<DD>x: real x component of axis of rotation<p>
+		<DD>y: real y component of axis of rotation<p>
+		<DD>z: real z component of axis of rotation<p>
+		<DD>angle:  angle to rotate, in degrees<p>
+
+  <DT>Discussion:<DD>
+	This function adds a rotation transformation to the current GOB.
+	This transformation will be concatenated with the existing
+	transformation by left multiplication;  GOBs with no existing
+	transformation effectively have the identity transformation
+	associated with them.  The positive direction of rotation is
+	determined by the right hand rule.<p>
+
+
+<DT><H3><A NAME="SCALE">pscale</A></H3>
+
+  <DT>Purpose:<DD>  Add a scaling <A HREF="drawp3d.html#TRANS">transformation</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pscale( factor );<p>
+
+	<DT>Parameters:
+		<DD>factor: real factor by which to scale the GOB<p>
+
+  <DT>Discussion:<DD>
+	This function adds a scaling transformation to the current GOB.
+	This transformation will be concatenated with the existing
+	transformation by left multiplication;  GOBs with no existing
+	transformation effectively have the identity transformation
+	associated with them.  Values of scale greater than 1.0
+	enlarge the GOB;  values less than 1.0 reduce it.  pscale
+	adds a scaling transformation which is uniform in all directions;
+	to add an anisotropic scaling transformation see pascal.<p>
+
+
+<DT><H3><A NAME="SDCMP">psdcmp</A></H3>
+
+  <DT>Purpose:<DD>  Set the current <A HREF="drawp3d.html#CMAP">color map</A> to one of several standard functions.<p>
+
+  <DT>Use:<DD>
+
+	psdcmp( min, max, which );<p>
+
+	<DT>Parameters:
+		<DD>min: real value to be mapped to 0.0<p>
+		<DD>max: real value to be mapped to 1.0<p>
+		<DD>which: integer selector for the standard map function desired<p>
+
+  <DT>Discussion:<DD>
+	When vertex lists of types containing scalar values (for
+	example, PCVVX (4)) are rendered, the values are translated
+	to colors by the current color map function.  psdcmp
+	allows the user to easily select that function.<p>
+
+	When translation occurs, the value is first rescaled into 
+	the interval from 0.0 to 1.0.  If the value is beyond the
+	range delimited by min and max, it maps to 0.0 if it is
+	closer to min or 1.0 if it is closer to max.  Otherwise,
+	it maps to (value-min)/(max-min), which is in the range
+	0.0 to 1.0 inclusive.  The mapped value is then passed
+	to the a mapping function.  whichmap selects which of
+	the mapping functions will be used, from the following
+	list:<p>
+<PRE>
+	whichmap	mapping function
+
+	   0	    gray scale, 0.0 being black and 1.0 white
+	   1	    fades from blue (0.0) to yellow (1.0)
+	   2	    fades from red (0.0) to blue (1.0), with
+			    waves of green to form 'contours'
+	   3	    pseudospectral
+	   4	    inverted pseudospectral
+</PRE>
+	Vertex type PCVVVX contains two scalar values.  Most
+	<A HREF="drawp3d.html#PRIM">primitives</A> will ignore the second value and apply the color
+	map to the first value.  The dp_rand_isosurf function will use
+	the first set of values associated with each vertex to produce
+	its isosurface, and color the surface by interpolation of the
+	second set of values.<p>
+
+<DT><H3><A NAME="SHTDN">pshtdn</A></H3>
+
+  <DT>Purpose:<DD>  Close and shut down all <A HREF="drawp3d.html#REN">renderers</A> and DrawP3D.<p>
+
+  <DT>Use:<DD>
+
+	pshtdn();<p>
+
+	<DT>Parameters: none<p>
+
+  <DT>Discussion:<DD>
+	This routine is intended to be called at the end of a program
+	using DrawP3D.  It closes and shuts down all initialized renderers,
+	and does everything else necessary to terminate the session.<p>
+
+
+<DT><H3><A NAME="SHTRN">pshtrn</A></H3>
+
+  <DT>Purpose:<DD>  Close and shut down a <A HREF="drawp3d.html#REN">renderer</A>.<p>
+
+  <DT>Use:<DD>
+
+	pshtrn( name );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the name of the renderer
+		      to be shut down<p>
+
+  <DT>Discussion:<DD>
+	This function closes and shuts down a renderer, destroying the
+	renderer object.  Once it has been shut down, the renderer
+	cannot be reopened.  Any reference to a <A HREF="drawp3d.html#GOB">GOB</A> known to a renderer
+	which has since been shut down is an error, and may result in
+	a program crash.  See also pshtdn, which shuts down all 
+	initialized renderers.<p>
+
+
+<DT><H3><A NAME="SNAP">psnap</A></H3>
+
+  <DT>Purpose:<DD>  Cause a model to be rendered.<p>
+
+  <DT>Use:<DD>
+
+	psnap( model, lights, camera );<p>
+
+	<DT>Parameters:
+		<DD>model: character string giving the name of the GOB 
+		       to be rendered<p>
+		<DD>lights: character string giving the name of the
+		        lighting GOB to use<p>
+		<DD>camera: character string giving the name of the camera
+			to use<p>
+
+  <DT>Discussion:<DD>
+	This function causes the <A HREF="drawp3d.html#REN">renderer(s)</A> to render the given <A HREF="drawp3d.html#GOB">GOB</A>.
+	The given <A HREF="drawp3d.html#LIGHT">lighting GOB provides the illumination model used,
+	and the given <A HREF="drawp3d.html#CAM">camera</A> provides the view.<p>
+
+
+<DT><H3><A NAME="SPHR">psphr</A></H3>
+
+  <DT>Purpose:<DD>  Add a sphere <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	psphr();<p>
+
+	<DT>Parameters: none<p>
+
+  <DT>Discussion:<DD>
+	This function adds a sphere primitive to the current GOB.  The
+	sphere is 1.0 units in radius and is centered at the origin.
+	It is expected that the user will use <A HREF="drawp3d.html#TRANS">transformations</A> to
+	move it to the desired location and scale it to the desired
+	size.<p>
+
+
+<DT><H3><A NAME="STATT">pstatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary string-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pstatt( name, string );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>string: character string to be associated with name<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary string
+	attribute to a GOB.<p>
+
+
+<DT><H3><A NAME="STCMP">pstcmp</A></H3>
+
+  <DT>Purpose:<DD>  Set the current <A HREF="drawp3d.html#CMAP">color map</A> function.<p>
+
+  <DT>Use:<DD>
+
+	external mapfun<p>
+	pstcmp( min, max, mapfun );<p>
+
+	<DT>Parameters:
+		<DD>min: real value to be mapped to 0.0<p>
+		<DD>max: real value to be mapped to 1.0<p>
+		<DD>mapfun: user-supplied color mapping subroutine<p>
+
+  <DT>Discussion:<DD>
+	When vertex lists of types containing scalar values (for
+	example, PCVVX (4)) are rendered, the values are translated
+	to colors by the current color map function.  pstcmp allows
+	the user to specify that function.<p>
+
+	When translation occurs, the value is first rescaled into 
+	the interval from 0.0 to 1.0.  If the value is beyond the
+	range delimited by min and max, it maps to 0.0 if it is
+	closer to min or 1.0 if it is closer to max.  Otherwise,
+	it maps to (value-min)/(max-min), which is in the range
+	0.0 to 1.0 inclusive.  The mapped value is then passed
+	to the subroutine mapfun, provided by the user, which is
+	defined as follows:<p>
+<PRE>
+	subroutine mapfun( val, r, g, b, a )
+	real val, r, g, b, a
+</PRE>
+	where val is the translated value.  mapfun should then
+	calculate red, green, blue, and opacity values, and store
+	them in r, g, b, and a respectively.  The subroutine can
+	use any algorithm it wishes to do this, although fast 
+	algorithms are preferable as mapfun may be called many
+	times.  r, g, b, and a should be assigned values between
+	0.0 and 1.0 inclusive.<p>
+	
+	Vertex type PCVVVX contains two scalar values.  Most
+	<A HREF="drawp3d.html#PRIM">primitives</A> will ignore the second value and apply the color
+	map to the first value.  The dp_rand_isosurf function will use
+	the first set of values associated with each vertex to produce
+	its isosurface, and color the surface by interpolation of the
+	second set of values.<p>
+
+<DT><H3><A NAME="TUBEMOL">ptbmol</a></H3>
+
+  <DT>Purpose:<DD> Create a spline tube <A
+  HREF="drawp3d.html#COMP">composite GOB</A> (typically to represent
+  biomolecular secondary structure.
+
+  <DT>Use:<DD>
+
+	ptbmol( vtxtyp, ctype, npts, coords, colors,
+	    cross, bres, cres );<p>
+
+	<DT>Parameters:<DD>
+		vtxtyp: an integer vertex type specifier<p>
+		ctype: a color type (currently only P3D_RGB)<p>	
+		npts: integer number of input vertices<p>
+		coords: real array of vertex data (backbone coords)<p>
+                colors: real array of color data<p>
+                cross: integer array specifying cross section at 
+		    each vertex<p>
+		bres: integer number of segments per vertex along backbone<p>
+		cres: integer number of segments around each cross section 
+		    spline<p>
+
+  <DT>Discussion:<DD>
+
+	This function draws a spline tube, typically representing the
+	secondary structure for a complex biomolecule like a protein.
+	The backbone of the tube follows a Catmull-Rom spline passing
+	through the vertices supplied.  The cross section at any given
+	point along the backbone is determined by the corresponding
+	entry in <em>cross</em>, according to the following
+	table:
+
+			<table border cellpadding=5 width=50% bgcolor=white>
+			  <caption><b>Spline Tube Cross Sections</b></caption>
+			  <tr>
+			    <td>1</td>
+			    <td>slab/ribbon</td>
+			  </tr>
+			  <tr>
+			    <td>2</td>
+			    <td>slab/ribbon with arrowhead</td>
+			  </tr>
+			  <tr>
+			    <td>3</td>
+			    <td>circle</td>
+			  </tr>
+			  <tr>
+			    <td>4</td>
+			    <td>large circle</td>
+			  </tr>
+			  <tr>
+			    <td>5</td>
+			    <td>star</td>
+			  </tr>
+			</table>
+
+        <p>The tube rotates about the backbone curve so that the flat
+        faces of ribbons are roughly oriented toward the local center of
+        curvature of the backbone.<p>
+
+        If the vertex type contains color data (for example,
+        PCCVX(1)), those colors are applied at appropriate points
+        along the backbone.  Colors can also be applied using value
+        data (vertex type PCVVX(4)) via an appropriate color map.
+        Normal data provided with the vertices is ignored.<p>
+
+        The <em>bres</em> and <em>cres</em> parameters allow control
+        of the number of segments used to trace out the spline in the
+        backbone and cross section directions.  There will be
+        <em>bres</em> segments between each pair of coordinates along
+        the backbone; <em>cres</em> segments are used to go completely
+        around the cross section.  Larger values produce a smoother
+        model at the cost of more complex (and slower) geometry.
+        Reasonable minimum values are 3 and 6 for <em>bres</em> and
+        <em>cres</em> respectively. <p>
+
+
+<DT><H3><A NAME="TEXT">ptext</A></H3>
+
+  <DT>Purpose:<DD>  Add a text <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	ptext( text, loc, u, v );<p>
+
+	<DT>Parameters:
+		<DD>text: character string giving text string of the primitive<p>
+		<DD>loc: real array (3) giving the point where the
+                     text is to begin<p>
+		<DD>u: real array (3) giving the writing direction vector<p>
+		<DD>v: real array (3) giving the text up direction vector<p>
+
+  <DT>Discussion:<DD>
+	This procedure adds a text primitive to the current GOB.  The
+	text is written starting at location, and running in the u
+	direction such that vertical strokes run in the v direction.
+	The height of text is controlled by the text-height <A HREF="drawp3d.html#ATTR">attribute</A>.
+	The 'front' face of the text is determined by the cross product
+	of u with v, so it is in the expected direction.<p>
+
+
+<DT><H3><A NAME="TNSFM">ptnsfm</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary <A HREF="drawp3d.html#TRANS">transformation</A> to a <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	ptnsfm( array );<p>
+
+	<DT>Parameters:
+		<DD>array:  real array(4,4) giving the transformation to be added<p>
+
+  <DT>Discussion:<DD>
+	This function adds an arbitrary transformation to the current GOB.
+	This transformation will be concatenated with the existing
+	transformation by left multiplication;  GOBs with no existing
+	transformation effectively have the identity transformation
+	associated with them.  See the discussion of transformations
+	in the User's Guide for information on the format of the
+	transformation.  Transformations are stored in array in
+	column order, such that a translation by 3 units in the X
+	direction could be created as follows:<p>
+<PRE>
+	 real array(4,4)
+	 data array/1.0, 0.0, 0.0, 0.0,
+	$           0.0, 1.0, 0.0, 0.0,
+	$           0.0, 0.0, 1.0, 0.0,
+	$           3.0, 0.0, 0.0, 1.0/
+</PRE>
+
+<DT><H3><A NAME="TORUS">ptorus</A></H3>
+
+  <DT>Purpose:<DD>  Add a torus <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	int ptorus( major, minor );<p>
+
+	<DT>Parameters:
+		<DD>major: real major axis radius<p>
+		<DD>minor: real minor axis radius<p>
+
+  <DT>Discussion:<DD>
+	This function adds a torus primitive to the current GOB.  The
+	torus lies in the x-y plane, centered at the origin.  The two
+	parameters control the major and minor radii.<p>
+
+
+<DT><H3><A NAME="TRANS">ptrans</A></H3>
+
+  <DT>Purpose:<DD>  Add a translation <A HREF="drawp3d.html#TRANS">transformation to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	ptrans( x, y, z );<p>
+
+	<DT>Parameters:
+		<DD>xshift: real distance to translate in the X direction<p>
+		<DD>yshift: real distance to translate in the Y direction<p>
+		<DD>zshift: real distance to translate in the Z direction<p>
+
+  <DT>Discussion:<DD>
+	This function adds a translation to the current GOB.
+	This transformation will be concatenated with the existing
+	transformation by left multiplication;  GOBs with no existing
+	transformation effectively have the identity transformation
+	associated with them.  See the discussion of transformations
+	in the User's Guide for information on the format of the
+	transformation.<p>
+
+
+<DT><H3><A NAME="TRATT">ptratt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary <A HREF="drawp3d.html#TRANS">transformation</A>-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the 
+	    current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	ptratt( name, trnsfm );<p>
+
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>transform: real array(4,4) giving the transformation 
+			   to be associated with name<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary transformation
+	attribute to a GOB.  Transformations are stored in array in
+	column order, such that a translation by 3 units in the X
+	direction could be created as follows:<p>
+<PRE>
+	 real array(4,4)
+	 data array/1.0, 0.0, 0.0, 0.0,
+	$           0.0, 1.0, 0.0, 0.0,
+	$           0.0, 0.0, 1.0, 0.0,
+	$           3.0, 0.0, 0.0, 1.0/
+</PRE>
+
+<DT><H3><A NAME="TRIST">ptrist</A></H3>
+
+  <DT>Purpose:<DD>  Add a triangle strip <A HREF="drawp3d.html#PRIM">primitive</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	ptrist( vtxtyp, ctype, npts, coords, colors, norms );<p>
+
+	<DT>Parameters:
+		<DD>vtxtyp: integer vertex type specifier<p>
+		<DD>ctype: integer color type (currently must be PRGB)<p>
+		<DD>npts: integer number of vertices<p>
+		<DD>coords: real array of coordinate data<p>
+		<DD>colors: real array of color data<p>
+		<DD>norms: real array of normal data<p>
+
+  <DT>Discussion:<DD>
+	This function adds a triangle strip to the current GOB.  There
+	will be nvertices-2 triangles in the triangle strip.  The first
+	is defined by vertices 0, 1, and 2, the second (if present) by 
+	vertices 1, 2, and 3, and so on.  For a description of the
+	vertex data format, see the section on vertex lists in this
+	document.<p>
+
+
+<DT><H3><A NAME="TXTHT">ptxtht</A></H3>
+
+  <DT>Purpose:<DD>  To set the text height <A HREF="drawp3d.html#ATTR">attribute</A> of the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	ptxtht( height );<p>
+
+	<DT>Parameters:
+		<DD>height:  real giving the character height of text <A HREF="drawp3d.html#PRIM">primitives</A><p>
+
+  <DT>Discussion:<DD>
+	This procedure sets the height for text primitives, by setting
+	the value of the text-height attribute.  Since the aspect
+	ratio of the characters is preserved, the length of the
+	text string is also effected.<p>
+
+
+<DT><H3><A NAME="VCATT">pvcatt</A></H3>
+
+  <DT>Purpose:<DD>  Add an arbitrary vector-valued <A HREF="drawp3d.html#ATTR">attribute</A> to the current <A HREF="drawp3d.html#GOB">GOB</A>.<p>
+
+  <DT>Use:<DD>
+
+	pvcatt( name, x, y, z );<p>
+	
+	<DT>Parameters:
+		<DD>name: character string giving the attribute name<p>
+		<DD>x: real x component of vector to be associated with name<p>
+		<DD>y: real y component of vector to be associated with name<p>
+		<DD>z: real z component of vector to be associated with name<p>
+
+  <DT>Discussion:<DD>
+	This procedure can be used to add an arbitrary vector
+	attribute to a GOB.<p>
+
+<DT><H3><A NAME="ZSURF">pzsurf</A></H3>
+
+  <DT>Purpose:<DD>  Create a Z surface <A HREF="drawp3d.html#COMP">composite GOB</A><p>
+
+  <DT>Use:<DD> 
+
+	pzsurf( vtype, zdata, vdata, nx, ny, crna, crnb, tfnull, tfun );<p>
+
+	<DT>Parameters:
+		<DD>vtype: an integer vertex type specifier constant<p>
+		<DD>zdata: an nx by ny array of reals specifying the z component<p>
+		<DD>vdata: an nx by ny array of reals specifying values
+   			for coloring via the current color map<p>
+		<DD>nx: integer: the number of vertices in the x direction<p>
+		<DD>ny: integer: the number of vertices in the y direction<p>
+		<DD>crna: real array (3) that specifies the starting corner<p>
+		<DD>crnb: real array (3) that specifies the ending corner<p>
+	   	<DD>tfnull: integer: if PTRUE, then include all points<p>
+		<DD>tfun: a subroutine that excludes points from the 
+   			Z surface.<p>
+
+  <DT>Discussion:<DD>
+	This function draws a surface, rectangular in the x and y
+	directions, the height of which is given by the data in the
+	array zdata.  Nx and ny specify the number of vertices in the
+	x and y direction respectively.<p>
+
+	If the vertex type requested is one which includes normal
+	data, normals will be generated.  This makes the surface look
+	smoother, but increases the size of the model.  If the vertex
+	type includes value data, the user must supply a valdata array
+	containing values for <A HREF="drawp3d.html#CMAP">color mapping</A>.  Zdata and valdate are
+	mapped from crna to crnb, so that the first point is at
+	crna.  From crna, the values are mapped in the
+	x-direction, with increasing rows in the y direction.  The z
+	values of crna and crnb are ignored.<p>
+
+	The user can cause points to be excluded from the surface by
+	setting tfnull to PFALSE (0), and specifying a subroutine tfun
+	to be used in determining which points to exclude.  If tfnull
+	is PTRUE (1), all points will be included in the surface and
+	the parameter tfun will be ignored.  Excluding a point causes
+	a hole to appear in the surface where the point would have been.<p>
+
+	Tfun is a user supplied subroutine that determines whether a
+	point should be excluded from the zsurface.  It should be
+	defined as follows:<p>
+<PRE>
+	subroutine tfun( ixclde, value, i, j )
+	integer ixclde, i, j
+	real value
+</PRE>
+	This function is called for each point in the surface, setting
+	value to the z value at that point and i and j to the array
+	indices (between 1 and nx and 1 and ny respectively) of the point
+	in question.  If on return from the function ixclde is PTRUE (1),
+	the point will be excluded and a hole will be left in the surface
+	at the appropriate point.  If ixclde is PFALSE (0), the point
+	will be included.  This enables the user to remove points on the
+	basis of position or value.<p>
+</DL>
+
+
+<HR>
+<A HREF=/general/software/software.html><IMG ALT="PSC Software," SRC=/general/images/icons/software_button.gif></A>
+<A HREF=http://www.psc.edu/><IMG ALT="PSC Home Page" SRC="/general/images/icons/psc_home.gif"></A>
+<A HREF=/search/search.html><IMG SRC=/general/images/icons/search.gif  ALT="Search"></A> <A HREF=/general/feedback.html><IMG SRC=/general/images/icons/feedback.gif ALT="Feedback"></A>
+<HR>
+        
+<FONT SIZE=-1>
+<I><A HREF=/copyright.html>&#169;</A> Pittsburgh Supercomputing Center (PSC)<br>
+</I></FONT>
+<FONT SIZE=-2>
+<I>URL: http://www.psc.edu/general/software/packages/drawp3d/c_reference/croutines/dp_child.html</I>
+</FONT>

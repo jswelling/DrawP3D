@@ -1,0 +1,101 @@
+<title>DrawP3D Visualization Subroutine Library</title>
+
+<H1><font size=+4>DrawP3D</font> Visualization Subroutine Library</H1>
+
+<IMG SRC="drawp3d_sample_image.jpg" ALT="cute picture here" ALIGN=LEFT HEIGHT=256 WIDTH=256 HSPACE=20>
+
+<br>
+<font size=+1>
+<ul>
+<li>Callable from Fortran or C
+<li>Writes VRML, OpenInventor, or P3D
+<li>Interactive display to X or GL
+<li>Parallel operation via PVM
+</ul>
+</font>
+<br>
+(Fluid flow model at left by <a href="http://www.uiuc.edu/ph/www/jferry/">Jim Ferry</a>)
+<BR CLEAR=LEFT>
+
+<p>
+DrawP3D is a subroutine library for doing scientific visualization.
+It was originally developed in connection with the 
+<A HREF="http://www.psc.edu/general/software/packages/p3d/p3d.html">P3D</A>
+format for describing 3D models (hence the name), but it has since
+outgrown P3D to become a very versatile package in its own right.
+In addition to the P3D format, VRML and Open Inventor formats are
+now supported.  This means that 3D models produced by DrawP3D can
+be included in Web pages and viewed with standard VRML browsers.
+Interactive output
+to X Windows and to Silicon Graphics GL is also provided.
+<p>
+The package can produce isosurfaces, Z surfaces,
+axes and the like from gridded, irregular, and randomly scattered data,
+plus basic graphical primitives like polygons, spheres, and cylinders.
+DrawP3D does not currently support texture mapping, but has a very general
+notion of color maps.  Using this feature, isosurfaces and Z surfaces
+can be colored based on a secondary field value.
+<p>
+One particularly nice feature of DrawP3D is its ability to run in
+a distributed fashion using 
+<A HREF="http://www.epm.ornl.gov/pvm/pvm_home.html">PVM</A>.
+(<a href=/general/software/packages/pvm/pvm.html>Here</a> is the PSC's
+PVM documentation.)
+Given a workstation running 
+<A HREF="http://www.sgi.com/Technology/Inventor.html">Silicon Graphics 
+Open Inventor</A>
+as a display server, geometry from multiple parallel processes can be 
+merged into a single display.  A display tool is also available on
+request to
+allow DrawP3D to transmit to a 
+<A HREF="http://www.evl.uic.edu:80/EVL/VR/systems.html#CAVE">CAVE-type</A> 
+virtual environment using
+<A HREF="http://www.sgi.com/Technology/Performer/">Silicon Graphics 
+Performer</A>.  This means that DrawP3D can easily be used to tie
+ongoing computations into a VR environment.  Development of the distributed
+version of DrawP3D was supported by the 
+<a href=http://zeus.ncsa.uiuc.edu:8080/GC3_Home_Page.html>
+Grand Challenge Cosmology Consortium</a>.
+
+<p>
+DrawP3D was developed at the <A HREF="http://www.psc.edu/">Pittsburgh 
+Supercomputing Center</A> with major support from the 
+<A HREF="http://www.nsf.gov/">National Science Foundation</A>.
+<p>
+<h2>DrawP3D Documentation</h2>
+<ul>
+<li> <A HREF="drawp3d.html">DrawP3D User's Manual</A>
+<li> <A HREF="ftn_ref.html">DrawP3D Fortran Language Reference</a>
+<li> <A HREF="c_ref.html">DrawP3D C Language Reference</a>
+<li> <A HREF="example_ref.html">DrawP3D Examples</a>
+<li> <A HREF="http://www.psc.edu/general/software/packages/drawp3d/drawp3d.html">DrawP3D documents specific to the Pittsburgh Supercomputing Center</a>
+</ul>
+
+<h2>Download the Software</h2>
+DrawP3D runs on any Unix platform.  The software is available
+by anonymous FTP <a href="ftp://ftp.psc.edu/pub/drawp3d">here</a>.
+
+<h2>See Also:</h2>
+<ul>
+<li>Other <a href=http://www.psc.edu/general/software/categories/graphics.html>graphics and 
+visualization software</A> at the PSC.
+
+</ul><p>
+<hr>
+<a href=/general/software/software.html><img alt="PSC Software," src=/general/images/icons/software_button.gif></a>
+<a href=http://www.psc.edu/><img alt="PSC Home Page" src="/general/images/icons/psc_home.gif"></a>
+<a href=/search/search.html><img src=/general/images/icons/search.gif  alt="Search"></a> <a href=/general/feedback.html><img src=/general/images/icons/feedback.gif alt="Feedback"></a>
+<hr>
+
+<address>DrawP3D Home Page / <a href="http://www.psc.edu/~welling">Joel Welling</a>, Pittsburgh Supercomputing Center / 
+<a href="mailto:welling@psc.edu">welling@psc.edu</a><br>
+<font size=-1>
+<i><a href=/copyright.html>&#169;</a> Pittsburgh Supercomputing Center (PSC)<br>
+Revised: October 27, 1994</i> <br>
+</font>
+<font size=-2>
+<i>URL: http://www.psc.edu/general/software/packages/drawp3d/drawp3d.html</i>
+</font>
+
+
+
