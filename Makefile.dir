@@ -47,8 +47,7 @@ HFILES= assist.h FNAMES.h p3dgen.h sphere.h cr_applications.h \
 
 DOCFILES=
 
-MISCFILES= Makefile Makefile.common c_test_std.t f_test_std.t notes.t \
-	ob_test_std.t descrip.mms cc.opt dp3d_fi_jbl.jbl
+MISCFILES= Makefile Makefile.dir rules.mk configure conf/*
 
 LIB_OBJ= $O/ge_error.o $O/indent.o $O/c_vlist_mthd.o $O/f_vlist_mthd.o \
 	$O/m_vlist_mthd.o $O/null_mthd.o \
