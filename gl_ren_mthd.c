@@ -807,6 +807,7 @@ static void destroy_bezier(P_Void_ptr the_thing) {
 #else
       if (it->obj_info.obj && isobj(it->obj_info.obj)) {
 	delobj(it->obj_info.obj);	
+      }
 #endif
     }
     if (it->cvlist) free_cached_vlist( it->cvlist );
@@ -3323,23 +3324,14 @@ void init_gl_widget (P_Renderer *self)
      glEnable(GL_NORMALIZE);
 
      hastransparent= 0;
-#ifdef never
-     if (hastransparent = (glGetIntegerv(GL_BLEND, &gdtmp), gdtmp)) {
-       glBlendFunc(GL_SRC_ALPHA,  GL_ONE_MINUS_SRC_ALPHA); 
-       if((GL_SRC_ALPHA) == GL_ONE 
-	  && ( GL_ONE_MINUS_SRC_ALPHA) == GL_ZERO) 
-	 glDisable(GL_BLEND) else glEnable(GL_BLEND);
-     }
-     else {
-       /* screen_door_transp() does what's needed */
-     }
-#endif
 
 #else
      mmode (MVIEWING);
-     doublebuffer ();
-     RGBmode ();
-     gconfig();
+     if (!AUTO(self)) {
+       doublebuffer ();
+       RGBmode ();
+       gconfig();
+     }
      subpixel (TRUE);
      cpack (0);
      clear ();
