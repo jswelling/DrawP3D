@@ -22,8 +22,6 @@ This module provides renderer methods for the OpenGL/IRIS gl renderer
  -Handle the size info in the input string!  The code is right there, in
   the non-OpenGL part of create_drawing_window.
  -AUTO is a stupid abbreviation for the state of not owning the window.
- -We need to improve the docs wrt Chromium.
- -Modify interface so an X window can be specified, rather than a widget.
  */
 
 #include <stdio.h>
@@ -334,6 +332,7 @@ static void get_drawing_area( P_Renderer* self,
   Window root;
   Status s;
   if (MANAGE(self) && !chromium_in_use()) {
+    fprintf(stderr,"Window %ld, display %ld\n",XWINDOW(self),XDISPLAY(self));
     s= XGetGeometry(XDISPLAY(self),XWINDOW(self),&root,x_corner,y_corner,
 		    width,height, &border_width, &depth);
     if (s != True) ger_fatal("Error: XGetGeometry failed!\n");
@@ -438,7 +437,7 @@ static void attach_drawing_window( P_Renderer* self )
     GLXCONTEXT(self)= glXCreateContext(XDISPLAY(self), vi, 0, GL_TRUE);
     
     if (!GLXCONTEXT(self)) {
-      ger_error("gl_ren_mthd: attach_drawing_widget: glXCreateContext failed; widget or window cannot support GL renderer!\n");
+      ger_error("gl_ren_mthd: attach_drawing_window: glXCreateContext failed; widget or window cannot support GL renderer!\n");
     }
     cmap = XCreateColormap(XDISPLAY(self), RootWindow(XDISPLAY(self), vi->screen),
 			   vi->visual, AllocNone);
@@ -3903,7 +3902,8 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
     MANAGE(self)= 0;
   }
   else MANAGE(self)= 1;
-  if (strstr (device, "widget=") != NULL) {
+  if (strstr (device, "widget=") != NULL 
+      || strstr(device,"window=") != NULL) {
     AUTO(self) = 1;
   }
   else AUTO(self)= 0;
@@ -3958,13 +3958,26 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
 
   if (MANAGE(self)) {
     if (AUTO (self)) {
+      char *here;
       char *ptr;
       
-      device = strstr (device, "widget=");
-      ptr = strchr (device, '=');
-      WIDGET(self) = (Widget) atoi (ptr + 1);
-      XDISPLAY(self)= XtDisplay(WIDGET(self));
-      XWINDOW(self)= XtWindow(WIDGET(self)); /* we will actually use a subwindow */
+      if ((here = strstr (device, "widget=")) != NULL) {
+	ptr = strchr (here, '=');
+	WIDGET(self) = (Widget) atoi (ptr + 1);
+	XDISPLAY(self)= XtDisplay(WIDGET(self));
+	/* we will actually use a subwindow, but save this window for now */
+	XWINDOW(self)= XtWindow(WIDGET(self)); 
+      }
+      else if ((here = strstr (device, "window=")) != NULL) {
+	ptr = strchr (here, '=');
+	WIDGET(self) = 0;
+	XDISPLAY(self)= XOpenDisplay(0);
+	/* we will actually use a subwindow, but save this window for now */
+	fprintf(stderr,"device <%s> -> window <%s>\n",device,ptr+1);
+	XWINDOW(self)= (Window) atoi (ptr + 1);
+      }
+      else ger_fatal("po_create_gl_renderer: failed to parse device string!\n");
+      fprintf(stderr,"Window is %ld\n",(long)XWINDOW(self));
 #ifdef never
       XSynchronize(XDISPLAY(self),True);
 #endif

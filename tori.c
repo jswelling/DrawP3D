@@ -163,8 +163,8 @@ static void show_cb(Widget w, XtPointer data, XtPointer cb)
 main(int argc, char *argv[])
 {
   int i;
-  char r[30], s[10];
-  char r2[30], s2[10];
+  char r[64], s[64];
+  char r2[64], s2[64];
   int width=300, height=300;
 
   exename= argv[0];
@@ -243,7 +243,6 @@ main(int argc, char *argv[])
     XtSetArg(args[i], XmNleftAttachment, XmATTACH_FORM); i++;
     drawa = XmCreateDrawingArea(draw_form, "spina", args, i);
     XtManageChild(drawa);
-    sprintf(r, "widget=%ld", (long)drawa);
     sprintf(s, "%dx%d", width, height);
     
     i = 0;
@@ -263,13 +262,17 @@ main(int argc, char *argv[])
 
     XtRealizeWidget(toplevel);
 
+    /* Have to wait for widget to be realized to get window ID */
+    sprintf(r, "widget=%ld", (long)drawa);
+#ifdef never
+    sprintf(r, "window=%ld", (long)XtWindow(drawa));
+#endif
+
 #ifdef never
     dp_init_ren("myrena", "xpainter", r, s);
-#endif
-    dp_init_ren("myrena", "gl", r, s);
-#ifdef never
     dp_init_ren("myrenb", "xpainter", r2, s2);
 #endif
+    dp_init_ren("myrena", "gl", r, s);
     dp_init_ren("myrenb", "gl", r2, s2);
   }
   else { /* automanage renderers */
@@ -277,8 +280,8 @@ main(int argc, char *argv[])
     dp_init_ren("myrena", "xpainter","automanage","");
     dp_init_ren("myrenb", "xpainter","automanage","");
 #endif
-    dp_init_ren("myrena", "gl","automanage","");
-    dp_init_ren("myrenb", "gl","automanage","");
+    dp_init_ren("myrena", "gl","","");
+    dp_init_ren("myrenb", "gl","","");
   }
 
   fprintf(stderr, "%s: renderer initialized\n",exename);
