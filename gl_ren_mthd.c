@@ -77,6 +77,10 @@ static gl_material materials[N_MATERIALS]= {
 
 #ifdef USE_OPENGL
 
+#ifndef MAXLIGHTS
+#define MAXLIGHTS 8
+#endif
+
 #define DEFAULT_WINDOW_GEOMETRY "300x300"
 
 static GLubyte greyPattern[128]= 
