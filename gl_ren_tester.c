@@ -18,8 +18,8 @@
 #include <Xm/MessageB.h>
 
 #ifdef USE_OPENGL
-#include <GL/glx.h>
 #include <GL/GLwMDrawA.h>
+#include <GL/glx.h>
 #else
 #include <X11/Xirisw/GlxMDraw.h>
 #include <gl/glws.h>
