@@ -19,10 +19,6 @@ This module provides renderer methods for the IRIS gl renderer
 */
 
 /* Notes-
-   -Need to test this thing in GL and OpenGL, with and without a widget
-    passed in, with multiple windows, on InfiniteReality (in GL at least)
-    and on Indy.
-   -Hopefully some of these set_drawing_window calls are unneeded?
  */
 
 #include <stdio.h>
@@ -64,8 +60,8 @@ This module provides renderer methods for the IRIS gl renderer
 #ifdef USE_OPENGL
 #define SPHERE_SLICES 10
 #define SPHERE_STACKS 10
-#define CYLINDER_SLICES 4
-#define CYLINDER_STACKS 6
+#define CYLINDER_SLICES 20
+#define CYLINDER_STACKS 1
 #endif
 
 #define N_MATERIALS 6
@@ -82,8 +78,6 @@ static gl_material materials[N_MATERIALS]= {
 #ifdef USE_OPENGL
 
 #define DEFAULT_WINDOW_GEOMETRY "300x300"
-
-static GLenum light_num= GL_LIGHT0;
 
 static GLubyte greyPattern[128]= 
 {
@@ -174,6 +168,8 @@ static gl_gob *my_cylinder = NULL, *my_sphere = NULL;
 
 static short hastransparent;
 
+static int ren_seq_num= 0; /* counts gl renderers */
+
 /*Definitions for cylinder nurbs*/
 
 #define CYL_NUMKNOTSX	4
@@ -187,8 +183,8 @@ static short hastransparent;
 /* function prototypes */
 static void new_widget_cb (Widget w, P_Renderer *self, XtPointer call_data);
 static void gl_resize_cb(Widget w, P_Renderer *self, XtPointer call_data);
-P_Renderer *init_gl_normal (P_Renderer *self);
-void init_gl_widget (P_Renderer *self); 
+static P_Renderer *init_gl_normal (P_Renderer *self);
+static void init_gl_widget (P_Renderer *self); 
 
 static void get_drawing_area_size( P_Renderer* self, long* x, long* y )
 {
@@ -263,22 +259,24 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
     int n;
     static char* fake_argv[]= {"drawp3d",NULL};
     int fake_argc= 1;
-    XtAppContext app_context;
     Widget shell; /* Parent shell */
     Widget glw;   /* The GLwDrawingArea widget */
 
     n= 0;
     XtSetArg(args[n], XtNgeometry, 
 	     (size_info) ? size_info : DEFAULT_WINDOW_GEOMETRY); n++;
-    shell= XtOpenApplication(&app_context, "DRawp3d",
+    shell= XtOpenApplication(&APPCONTEXT(self), "DRawp3d",
 			     NULL, 0, &fake_argc, fake_argv, NULL,
 			     applicationShellWidgetClass, args, n);
-
     n = 0;
     XtSetArg(args[n], GLwNrgba, TRUE); n++;
     XtSetArg(args[n], GLwNdoublebuffer, TRUE); n++;
+    XtSetArg(args[n], GLwNdepthSize, 16); n++;
     glw= XtCreateManagedWidget("glxdrawingarea", glwDrawingAreaWidgetClass, 
 			       shell, args, n);
+    if (!glw) {
+      ger_fatal("create_drawing_window: Unable to draw to your display!\n");
+    }
 
     WIDGET(self)= glw;
 
@@ -293,8 +291,8 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
     /* Cleverly stall until initialization is complete */
     while (!RENDATA(self)->initialized) {
       XEvent event;
-      if (XtAppPending(app_context)) { 
-	XtAppNextEvent(app_context, &event);
+      if (XtAppPending(APPCONTEXT(self))) { 
+	XtAppNextEvent(APPCONTEXT(self), &event);
 	XtDispatchEvent(&event);
       }
     }
@@ -345,9 +343,9 @@ static void release_drawing_window( P_Renderer* self )
     /* the rest is owned by the calling app */
   }
   else {
-    XtDestroyWidget(XtParent(WIDGET(self))); /* gets WIDGET(self) too */
-    XtDestroyApplicationContext(XtWidgetToApplicationContext(WIDGET(self)));
     glXDestroyContext(XtDisplay(WIDGET(self)),GLXCONTEXT(self));
+    XtDestroyWidget(XtParent(WIDGET(self))); /* gets WIDGET(self) too */
+    XtDestroyApplicationContext(APPCONTEXT(self));
   }
 #else
   if (AUTO(self)) {
@@ -408,9 +406,6 @@ static void define_materials(P_Renderer *self)
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 
 		(GLfloat)materials[lupe].shininess);
     glEndList();
-
-    fprintf(stderr,"Just defined material %d, ctx %x\n",
-	    (int)materials[lupe].obj,(int)glXGetCurrentContext());
   }
 
 #else
@@ -448,8 +443,6 @@ static void update_materials(P_Renderer *self, int mat_index)
     CURMATERIAL(self) = 0;
   }
 #ifdef USE_OPENGL
-fprintf(stderr,"calling material object %d, ctx %x\n",
-(int)materials[CURMATERIAL(self)].obj,(int)glXGetCurrentContext());
   set_drawing_window(self);
   glCallList(materials[CURMATERIAL(self)].obj);
 #else
@@ -657,7 +650,6 @@ static void send_cached_vlist( P_Cached_Vlist* cvlist )
 }
 
 static void destroy_object(P_Void_ptr the_thing) {
-    /*Destroys any object.*/
     
     gl_gob *it = (gl_gob *)the_thing;
     P_Renderer *self = (P_Renderer *)po_this;
@@ -668,8 +660,6 @@ static void destroy_object(P_Void_ptr the_thing) {
 
     if (it) {
 #ifdef USE_OPENGL
-fprintf(stderr,"destroying object %d, ctx %x\n",
-it->obj_info.obj,(int)glXGetCurrentContext());
       if (it->obj_info.obj && glIsList(it->obj_info.obj)) {
 	glDeleteLists( it->obj_info.obj, 1);
 #else
@@ -683,7 +673,6 @@ it->obj_info.obj,(int)glXGetCurrentContext());
     METHOD_OUT
 }
 
-/* Never called if AVOID_NURBS is set */
 static void destroy_sphere(P_Void_ptr the_thing) {
     /*Destroy a sphere.*/
     
@@ -706,7 +695,6 @@ static void destroy_sphere(P_Void_ptr the_thing) {
     }
 #endif
 
-fprintf(stderr,"destroy_sphere, ctx %x\n",(int)glXGetCurrentContext());
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
     (*(ASSIST(self)->destroy_sphere))(the_thing);
@@ -714,9 +702,10 @@ fprintf(stderr,"destroy_sphere, ctx %x\n",(int)glXGetCurrentContext());
 
     if (it) {
 #ifdef USE_OPENGL
-      if (it->quad_obj) gluDeleteQuadric(it->quad_obj);
+      if (it->obj_info.quad_obj) gluDeleteQuadric(it->obj_info.quad_obj);
 #else
-      if (it->obj_info.obj && isobj(it->obj_info.obj)) delobj(it->obj_info.obj);	
+      if (it->obj_info.obj && isobj(it->obj_info.obj)) 
+	delobj(it->obj_info.obj);	
 #endif
       free((void *)it);
     }
@@ -724,7 +713,6 @@ fprintf(stderr,"destroy_sphere, ctx %x\n",(int)glXGetCurrentContext());
     METHOD_OUT
 }
 
-/* Never called if AVOID_NURBS is set */
 static void destroy_cylinder(P_Void_ptr the_thing) {
     /*Destroys a cylinder.*/
     
@@ -754,7 +742,7 @@ static void destroy_cylinder(P_Void_ptr the_thing) {
 
     if (it) {
 #ifdef USE_OPENGL
-      if (it->quad_obj) gluDeleteQuadric(it->quad_obj);
+      if (it->obj_info.quad_obj) gluDeleteQuadric(it->obj_info.quad_obj);
 #else
       if (it->obj_info.obj && isobj(it->obj_info.obj)) delobj(it->obj_info.obj);	
 #endif
@@ -767,9 +755,7 @@ static void destroy_cylinder(P_Void_ptr the_thing) {
     METHOD_OUT
 }
 
-/* Never called if AVOID_NURBS is set */
 static void destroy_torus(P_Void_ptr the_thing) {
-    /*Destroys any object.*/
     
     gl_gob *it = (gl_gob *)the_thing;
     P_Renderer *self = (P_Renderer *)po_this;
@@ -789,6 +775,37 @@ static void destroy_torus(P_Void_ptr the_thing) {
       gluDeleteNurbsRenderer(it->obj_info.nurbs_obj.ren);
 #else
       free((P_Void_ptr)(it->obj_info.nurbs_obj));
+#endif
+    }
+    if (it->cvlist) free_cached_vlist( it->cvlist );
+    free((void *)it);
+
+#endif
+
+    METHOD_OUT
+}
+
+static void destroy_bezier(P_Void_ptr the_thing) {
+    
+    gl_gob *it = (gl_gob *)the_thing;
+    P_Renderer *self = (P_Renderer *)po_this;
+
+    METHOD_IN
+
+    ger_debug("gl_ren_mthd: destroy_bezier\n");
+
+#ifdef AVOID_NURBS
+    METHOD_RDY(ASSIST(self));
+    (*(ASSIST(self)->destroy_bezier))(the_thing);
+#else
+
+    if (it) {
+#ifdef USE_OPENGL
+      free((P_Void_ptr)(it->obj_info.nurbs_obj.data));
+      gluDeleteNurbsRenderer(it->obj_info.nurbs_obj.ren);
+#else
+      if (it->obj_info.obj && isobj(it->obj_info.obj)) {
+	delobj(it->obj_info.obj);	
 #endif
     }
     if (it->cvlist) free_cached_vlist( it->cvlist );
@@ -861,13 +878,6 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 	if ( ((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) )
 	  glEnable(GL_CULL_FACE);
 	else glDisable(GL_CULL_FACE);
-#ifdef never
-	glCullFace(
-	       !((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) ? 
-	       GL_FRONT : GL_BACK); 
-	((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) ? 
-	  glEnable(GL_CULL_FACE):glDisable(GL_CULL_FACE);
-#endif
 #else
 	backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
 #endif
@@ -938,8 +948,6 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 	/*and render*/
 #ifdef USE_OPENGL
 	set_drawing_window(self);
-fprintf(stderr,"rendering object %d, ctx %x\n",(int)it->obj_info.obj,
-(int)glXGetCurrentContext());
 	if (it->obj_info.obj) glCallList(it->obj_info.obj);
 #else
 	if (it->obj_info.obj) callobj(it->obj_info.obj);
@@ -976,7 +984,7 @@ static int ren_prim_setup( P_Renderer* self, gl_gob* it,
   float color[4];
   P_Material *mat;
   int screendoor_set= 0;
-  
+
   /*get the attributes*/
   METHOD_RDY(ASSIST(self));
   pcolor= (*(ASSIST(self)->color_attribute))(COLORSYMBOL(self));
@@ -987,9 +995,6 @@ static int ren_prim_setup( P_Renderer* self, gl_gob* it,
   else {
     glDisable(GL_CULL_FACE);
   }
-#ifdef never
-  glCullFace(!((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) ? GL_FRONT : GL_BACK); ((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self))) ? glEnable(GL_CULL_FACE):glDisable(GL_CULL_FACE);
-#endif
 #else
   backface((*(ASSIST(self)->bool_attribute))(BACKCULLSYMBOL(self)));
 #endif
@@ -1072,14 +1077,13 @@ static void ren_prim_finish( P_Transform *trans, int screendoor_set )
   }
 }
 
-/* Never called if AVOID_NURBS is set */
 static void ren_sphere(P_Void_ptr the_thing, P_Transform *transform,
 		P_Attrib_List *attrs) {
   P_Renderer *self = (P_Renderer *)po_this;
   gl_gob *it = (gl_gob *)the_thing;
   int screendoor_set;
   METHOD_IN
-	    
+
   if (RENDATA(self)->open) {
     ger_debug("gl_ren_mthd: ren_sphere");
     if (!it) {
@@ -1088,7 +1092,6 @@ static void ren_sphere(P_Void_ptr the_thing, P_Transform *transform,
       return;
     }
 
-fprintf(stderr,"ren_sphere, ctx %x\n",(int)glXGetCurrentContext());
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
     (*(ASSIST(self)->ren_sphere))(the_thing, transform, attrs);
@@ -1097,8 +1100,8 @@ fprintf(stderr,"ren_sphere, ctx %x\n",(int)glXGetCurrentContext());
     screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
-    if (it->quad_obj) 
-      gluSphere(it->quad_obj, 1.0, SPHERE_SLICES, SPHERE_STACKS);
+    if (it->obj_info.quad_obj) 
+      gluSphere(it->obj_info.quad_obj, 1.0, SPHERE_SLICES, SPHERE_STACKS);
 #else
     if (it->obj_info.obj) callobj(it->obj_info.obj);
 #endif
@@ -1112,14 +1115,13 @@ fprintf(stderr,"ren_sphere, ctx %x\n",(int)glXGetCurrentContext());
   }
 }
 
-/* Never called if AVOID_NURBS is set */
 static void ren_cylinder(P_Void_ptr the_thing, P_Transform *transform,
 		P_Attrib_List *attrs) {
   P_Renderer *self = (P_Renderer *)po_this;
   gl_gob *it = (gl_gob *)the_thing;
   int screendoor_set;
   METHOD_IN
-	    
+
   if (RENDATA(self)->open) {
     ger_debug("gl_ren_mthd: ren_cylinder");
     if (!it) {
@@ -1135,13 +1137,19 @@ static void ren_cylinder(P_Void_ptr the_thing, P_Transform *transform,
     screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
-    if (it->quad_obj) 
-      gluCylinder(it->quad_obj, 1.0, 1.0, 1.0, 
+    if (it->obj_info.quad_obj) {
+      gluCylinder(it->obj_info.quad_obj, 1.0, 1.0, 1.0, 
 		  CYLINDER_SLICES, CYLINDER_STACKS);
+      gluQuadricOrientation(it->obj_info.quad_obj, GLU_INSIDE);
+      gluDisk( it->obj_info.quad_obj, 0.0, 1.0, CYLINDER_SLICES, 1 );
+      glTranslatef(0.0,0.0,1.0);
+      gluQuadricOrientation(it->obj_info.quad_obj, GLU_OUTSIDE);
+      gluDisk( it->obj_info.quad_obj, 0.0, 1.0, CYLINDER_SLICES, 1 );
+    }
 #else
     if (it->obj_info.obj) callobj(it->obj_info.obj);
 #endif
-    else ger_error("gl_ren_mthd: ren_cylinder: null sphere obj found!");
+    else ger_error("gl_ren_mthd: ren_cylinder: null cylinder obj found!");
 
     ren_prim_finish( transform, screendoor_set );
 
@@ -1150,7 +1158,6 @@ static void ren_cylinder(P_Void_ptr the_thing, P_Transform *transform,
   }
 }
 
-/* Never called if AVOID_NURBS is set */
 static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 		P_Attrib_List *attrs) {
   P_Renderer *self = (P_Renderer *)po_this;
@@ -1161,6 +1168,7 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
   if (RENDATA(self)->open) {
 
     ger_debug("gl_ren_mthd: ren_torus");
+
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
     (*(ASSIST(self)->ren_torus))(the_thing, transform, attrs);
@@ -1171,10 +1179,10 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
       METHOD_OUT
       return;
     }
+
     screendoor_set= ren_prim_setup( self, it, transform, attrs );
 
 #ifdef USE_OPENGL
-
     if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
 	gluBeginSurface( it->obj_info.nurbs_obj.ren );
 	gluNurbsSurface( it->obj_info.nurbs_obj.ren, 12, knots, 12, knots,  
@@ -1195,6 +1203,60 @@ static void ren_torus(P_Void_ptr the_thing, P_Transform *transform,
 
 #endif
     else ger_error("gl_ren_mthd: ren_torus: null torus obj found!");
+
+    ren_prim_finish( transform, screendoor_set );
+
+#endif
+    METHOD_OUT
+  }
+}
+
+static void ren_bezier(P_Void_ptr the_thing, P_Transform *transform,
+		P_Attrib_List *attrs) {
+  P_Renderer *self = (P_Renderer *)po_this;
+  gl_gob *it = (gl_gob *)the_thing;
+  int screendoor_set;
+  METHOD_IN
+	    
+  if (RENDATA(self)->open) {
+
+    ger_debug("gl_ren_mthd: ren_bezier");
+#ifdef AVOID_NURBS
+    METHOD_RDY(ASSIST(self));
+    (*(ASSIST(self)->ren_bezier))(the_thing, transform, attrs);
+#else
+
+    if (!it) {
+      ger_error("gl_ren_mthd: ren_bezier: null object data found.");
+      METHOD_OUT
+      return;
+    }
+    screendoor_set= ren_prim_setup( self, it, transform, attrs );
+
+#ifdef USE_OPENGL
+
+    if (it->obj_info.nurbs_obj.ren && it->obj_info.nurbs_obj.data) {
+      static GLfloat bez_knots[8]= {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
+      gluBeginSurface( it->obj_info.nurbs_obj.ren );
+      if (it->obj_info.nurbs_obj.flags) {
+	/* color info is present */
+	GLfloat* clr_data= it->obj_info.nurbs_obj.data + 3*16;
+	gluNurbsSurface( it->obj_info.nurbs_obj.ren, 
+			 8, bez_knots, 8, bez_knots, 4, 4*4, 
+			 clr_data,  4,  4,  
+			 GL_MAP2_COLOR_4);
+      }
+      gluNurbsSurface( it->obj_info.nurbs_obj.ren, 
+		       8, bez_knots, 8, bez_knots, 3, 4*3, 
+		       it->obj_info.nurbs_obj.data,  4,  4,  GL_MAP2_VERTEX_3);
+      gluEndSurface( it->obj_info.nurbs_obj.ren );
+    }
+
+#else
+    if (it->obj_info.obj) callobj(it->obj_info.obj);
+
+#endif
+    else ger_error("gl_ren_mthd: ren_torus: null bezier obj found!");
 
     ren_prim_finish( transform, screendoor_set );
 
@@ -1369,8 +1431,6 @@ static P_Void_ptr def_sphere(char *name) {
     }
 #endif
 
-fprintf(stderr,"defining sphere, ctx %x\n",(int)glXGetCurrentContext());
-
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
 #ifdef USE_OPENGL
@@ -1387,7 +1447,7 @@ fprintf(stderr,"defining sphere, ctx %x\n",(int)glXGetCurrentContext());
       ger_fatal("def_sphere: unable to allocate %d bytes!", sizeof(gl_gob));
 
 #ifdef USE_OPENGL
-    it->quad_obj= gluNewQuadric();
+    it->obj_info.quad_obj= gluNewQuadric();
     it->color_mode= 1;
     SPHERE(self)= it;
     SPHERE_DEFINED(self)= 1;
@@ -1493,7 +1553,7 @@ static P_Void_ptr def_cylinder(char *name)
       ger_fatal("def_cylinder: unable to allocate %d bytes!", sizeof(gl_gob));
     
 #ifdef USE_OPENGL
-    it->quad_obj= gluNewQuadric();
+    it->obj_info.quad_obj= gluNewQuadric();
     it->color_mode= 1;
     it->cvlist= NULL;
     CYLINDER(self)= it;
@@ -1529,7 +1589,7 @@ static P_Void_ptr def_cylinder(char *name)
       it->cvlist= NULL;
       translate(0, 0, 1);
       mycircle(1.0, TRUE);
-      translate(0, 0, -1);
+      translate(0, 0, 0);
       mycircle(1.0, FALSE);
       
       bgnsurface();
@@ -1545,11 +1605,11 @@ static P_Void_ptr def_cylinder(char *name)
       endsurface();
       
       closeobj();
+      my_cylinder = it;
     }
-    my_cylinder = it;
+#endif
     METHOD_OUT
     return( (P_Void_ptr)it );
-#endif
     
 #endif
     
@@ -1576,7 +1636,7 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
       {
 	int i, j;
 #ifdef USE_OPENGL
-	GLfloat knot_data= NULL;
+	GLfloat* knot_data= NULL;
 	GLfloat* runner;
 #else
 	double* knot_data= NULL;
@@ -1607,6 +1667,7 @@ static P_Void_ptr def_torus(char *name, double major, double minor) {
 #ifdef USE_OPENGL
 	it->obj_info.nurbs_obj.data= knot_data;
 	it->obj_info.nurbs_obj.ren= gluNewNurbsRenderer();
+	it->obj_info.nurbs_obj.flags= 0;
 	it->color_mode= 1;
 #else
 	it->obj_info.nurbs_obj= knot_data;
@@ -1659,9 +1720,22 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 	top_level_call = 1;
 
 	set_drawing_window(self);
-fprintf(stderr,"Rendering gob <%s>\n",thisgob->name);
 
 #ifdef USE_OPENGL
+	if (!AUTO(self)) {
+	  long xsize, ysize;
+	  int event_pending= 1;
+	  /* run a baby event loop */
+	  while (event_pending) {
+	    XEvent event;
+	    if (XtAppPending(APPCONTEXT(self))) { 
+	      event_pending= 1;
+	      XtAppNextEvent(APPCONTEXT(self), &event);
+	      XtDispatchEvent(&event);
+	    }
+	    else event_pending= 0;
+	  }
+	}
 	glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_LIST_BIT );
 	GLPROF("Clearing");
 	glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
@@ -1755,7 +1829,7 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
   P_Gob_List *kidlist;
   register short lupe;
   METHOD_IN
-    
+
   if (RENDATA(self)->open) {
     
     if (primdata) {
@@ -1788,8 +1862,7 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
       
 #ifdef USE_OPENGL
 	/*First, clear all lights.*/
-fprintf(stderr,"turning off lights in ctx %x!\n",(int)glXGetCurrentContext());
-	for (lupe= 0; lupe < GL_MAX_LIGHTS; lupe++) {
+	for (lupe= 0; lupe < MY_GL_MAX_LIGHTS; lupe++) {
 	  glDisable(GL_LIGHT0 + lupe);
 	}
 	
@@ -1805,7 +1878,6 @@ fprintf(stderr,"turning off lights in ctx %x!\n",(int)glXGetCurrentContext());
       }
 
       if ( thisgob->has_transform ) ren_transform(thisgob->trans);
-fprintf(stderr,"begin lighting traversal, ctx %x\n",(int)glXGetCurrentContext());
 
       if (thisgob->attr) {
 	METHOD_RDY(ASSIST(self));
@@ -1839,23 +1911,10 @@ fprintf(stderr,"begin lighting traversal, ctx %x\n",(int)glXGetCurrentContext())
 	(*(ASSIST(self)->pop_attributes))( thisgob->attr );
       }
 
-      fprintf(stderr,"end lighting traversal, ctx %x\n",(int)glXGetCurrentContext());
-
       if (thistrans) {
 #ifdef USE_OPENGL
 	glPopMatrix();
 	
-#ifdef never
-	/* Made it back to top; now the ambient lighting should be set...*/
-	{
-	  GLfloat ambient[4];
-	  ambient[0]= AMBIENTCOLOR(self)[0];
-	  ambient[1]= AMBIENTCOLOR(self)[1];
-	  ambient[2]= AMBIENTCOLOR(self)[2];
-	  ambient[3]= 1.0;
-	  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambient);
-	}
-#endif
 #else
 	popmatrix();
 	
@@ -2060,59 +2119,57 @@ static P_Void_ptr def_bezier(char *name, P_Vlist *vertices) {
   
 #ifdef USE_OPENGL
   {
-    static GLfloat bez_knots[8]= {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
-    GLfloat coords[3*16];
-    GLfloat colors[4*16];
-    GLfloat *coordptr, *clrptr;
+    GLfloat* knot_data= NULL;
+    GLfloat* runner;
+    GLfloat* crunner= NULL;
+    int buf_length;
     float col4[4];
     int i;
-    GLUnurbsObj *nobj;
 
-    coordptr= coords;
-    clrptr= colors;
+    if ((!color_flag) && (!value_flag) && (!value_flag_2)) 
+      buf_length= 3*16;
+    else buf_length= 3*16 + 4*16;
+    if ( !(knot_data= (GLfloat*)malloc(buf_length*sizeof(GLfloat))) ) 
+      ger_fatal("def_bezier: unable to allocate %d bytes!",
+		buf_length*sizeof(GLfloat));
+
+    runner= knot_data;
+    if (color_flag || value_flag || value_flag_2) 
+      crunner= knot_data + 3*16;
     METHOD_RDY(vertices);
     for (i=0; i<16; i++) {
-      *coordptr++= (*vertices->x)(i);
-      *coordptr++= (*vertices->y)(i);
-      *coordptr++= (*vertices->z)(i);
+      *runner++= (*vertices->x)(i);
+      *runner++= (*vertices->y)(i);
+      *runner++= (*vertices->z)(i);
       if (color_flag) {
-	*clrptr++ = (*vertices->r)(i);
-	*clrptr++ = (*vertices->g)(i);
-	*clrptr++ = (*vertices->b)(i);
-	*clrptr++ = (*vertices->a)(i);
+	*crunner++ = (*vertices->r)(i);
+	*crunner++ = (*vertices->g)(i);
+	*crunner++ = (*vertices->b)(i);
+	*crunner++ = (*vertices->a)(i);
       } else if (value_flag) {
 	get_rgb_color(self, col4, (*vertices->v)(i));
-	*clrptr++ = (col4[0]);
-	*clrptr++ = (col4[1]);
-	*clrptr++ = (col4[2]);
-	*clrptr++ = (col4[3]);
+	*crunner++ = (col4[0]);
+	*crunner++ = (col4[1]);
+	*crunner++ = (col4[2]);
+	*crunner++ = (col4[3]);
       } else if (value_flag_2) {
 	get_rgb_color(self, col4, (*vertices->v2)(i));
-	*clrptr++ = (col4[0]);
-	*clrptr++ = (col4[1]);
-	*clrptr++ = (col4[2]);
-	*clrptr++ = (col4[3]);
+	*crunner++ = (col4[0]);
+	*crunner++ = (col4[1]);
+	*crunner++ = (col4[2]);
+	*crunner++ = (col4[3]);
       }
     }
-  
-    nobj= gluNewNurbsRenderer();
-    set_drawing_window(self);
-    glNewList( it->obj_info.obj=glGenLists(1) , GL_COMPILE);
-    /*As of now, we're defining the object*/
-    gluBeginSurface( nobj );
+
+    it->obj_info.nurbs_obj.data= knot_data;
+    it->obj_info.nurbs_obj.ren= gluNewNurbsRenderer();
     if (color_flag || value_flag || value_flag_2) {
-      it->color_mode= 1;
-      gluNurbsSurface(*nobj,  8,  bez_knots,  8,  bez_knots,  
-		      4*sizeof(double),  4*4*sizeof(double),  
-		      colors,  4,  4,  GL_MAP2_COLOR_4 );
+      it->obj_info.nurbs_obj.flags= 1;
     }
-    else it->color_mode= 0;
-    gluNurbsSurface(*nobj,  8,  bez_knots,  8,  bez_knots,  
-		    3*sizeof(double),  4*3*sizeof(double),  
-		    coords,  4,  4,  GL_MAP2_VERTEX_3 );
-    gluEndSurface( nobj );
-    glEndList();
-    gluDeleteNurbsRenderer(nobj);
+    else {
+      it->obj_info.nurbs_obj.flags= 0;
+    }
+    it->color_mode= 1;    
   }
 #else
   {
@@ -2212,8 +2269,6 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
 #ifdef USE_OPENGL
     set_drawing_window(self);
     glNewList( it->obj_info.obj=glGenLists(1) , GL_COMPILE);
-    fprintf(stderr,"defining mesh, ctx %x, obj %d\n",
-(int)glXGetCurrentContext(),(int)it->obj_info.obj);
 #else
     makeobj( it->obj_info.obj=genobj() );
 #endif
@@ -2227,9 +2282,9 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
 #ifdef USE_OPENGL
       it->color_mode = 1;
 #else
-	it->color_mode = LMC_AD;
+      it->color_mode = LMC_AD;
 #endif
-	break;
+      break;
     case P3D_CCVTX:
     case P3D_CVVTX:  /*Fixed*/
     case P3D_CVVVTX:
@@ -2245,7 +2300,7 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     for (loope=0; loope < nfacets; loope++) {
 #ifdef USE_OPENGL
 	if (*facet_lengths == 3)
-	    glBegin(GL_TRIANGLE_STRIP);
+	    glBegin(GL_TRIANGLES);
 	else if (*facet_lengths == 4)
 	    glBegin(GL_QUADS);
 	else
@@ -2425,24 +2480,6 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
     
 #ifdef USE_OPENGL
     {
-
-#ifdef never
-	GLfloat mat_specular[] = { 
-		1.0, 1.0, 1.0, 1.0 	};     
-	GLfloat mat_shininess[] = { 
-		50.0 	};     
-	GLfloat light_position[] = { 
-		1.0, 1.0, 1.0, 0.0 	};      
-	GLuint lightlist;
-	/* not needed */
-	set_drawing_window(self);
-	glNewList( lightlist=glGenLists(1) , GL_COMPILE );
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);     
-	glEnable(GL_LIGHTING);     
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position);      
-	glEnable(GL_LIGHT0);
-	glEndList();
-#endif
       GLfloat cvals[4];
       GLfloat xvals[4];
       GLuint lightlist;
@@ -2457,21 +2494,18 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
 
       set_drawing_window(self);
       glNewList( lightlist=glGenLists(1) , GL_COMPILE );
-#ifdef never
-      glLightfv( light_num, GL_AMBIENT, cvals );
-#endif
-      glLightfv( light_num, GL_DIFFUSE, cvals );
-      glLightfv( light_num, GL_SPECULAR, cvals );
-      glLightfv( light_num, GL_POSITION, xvals );
-      glEnable( light_num );
+      glLightfv( LIGHT_NUM(self), GL_DIFFUSE, cvals );
+      glLightfv( LIGHT_NUM(self), GL_SPECULAR, cvals );
+      glLightfv( LIGHT_NUM(self), GL_POSITION, xvals );
+      glEnable( LIGHT_NUM(self) );
       glEndList();
-fprintf(stderr,"defining light list %d, light %d, widget %x, ctx %x, result %s\n",
-(int)lightlist,(int)(light_num-GL_LIGHT0),
-(int)WIDGET(self),(int)glXGetCurrentContext(),glIsList(lightlist)?"true":"false");
 
       /* Increment light number, wrapping if necessary */
-      light_num += 1;
-      if (light_num >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) light_num= GL_LIGHT0;
+      LIGHT_NUM(self) = LIGHT_NUM(self) + 1;
+      if (LIGHT_NUM(self) >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) {
+	ger_error("gl_ren_mthd: Warning, recycling light numbers!\n");
+	LIGHT_NUM(self)= GL_LIGHT0;
+      }
 
       METHOD_OUT
       return((P_Void_ptr)lightlist);
@@ -2519,40 +2553,7 @@ void traverse_light(P_Void_ptr it, P_Transform *foo,
     
 #ifdef USE_OPENGL
     /* Turn on the given light */
-    fprintf(stderr,"calling light list %d, ctx %x\n",
-	    (int)it,glXGetCurrentContext());
     glCallList((GLuint)it);
-	{
-	  GLboolean flag;
-	  int i;
-	  int found_light;
-	  GLfloat clrs[4];
-	  fprintf(stderr,"**************traversing light\n");
-	  fprintf(stderr,"Widget is %x, it (%d) is %s\n",
-		  (int)WIDGET(self),(GLuint)it,
-		  glIsList((GLuint)it)?"true":"false");
-	  fprintf(stderr,"ctx is %x, should be %x\n",
-		  (int)glXGetCurrentContext(),(int)GLXCONTEXT(self));
-	  flag= glIsEnabled(GL_COLOR_MATERIAL);
-	  fprintf(stderr,"color_material is %s\n",flag ? "on" : "off");
-	  found_light= 0;
-	  for (i=0; i<100; i++) {
-	    if (glIsEnabled(GL_LIGHT0 + i)) {
-	      fprintf(stderr,"light %d is on\n",i);
-	      found_light++;
-	    }
-	  }
-	  if (!found_light) fprintf(stderr,"No lights on!\n");
-	  glGetBooleanv(GL_LIGHTING,&flag);
-	  if (flag) fprintf(stderr,"lighting is on\n");
-	  else fprintf(stderr,"lighting is off\n");
-	  glGetFloatv(GL_LIGHT_MODEL_AMBIENT , clrs);
-	  fprintf(stderr,"ambient color (%f %f %f %f)\n",
-		  clrs[0],clrs[1],clrs[2],clrs[3]);
-	  glGetFloatv(GL_CURRENT_COLOR, clrs);
-	  fprintf(stderr,"current color (%f %f %f %f)\n",
-		  clrs[0],clrs[1],clrs[2],clrs[3]);
-	}
 #else
     /*Okay... let's figure out how many lights are in use...
      and quit if we have too many...*/
@@ -2584,7 +2585,6 @@ void destroy_light(P_Void_ptr it) {
     ger_debug("gl_ren_mthd: destroy_light\n");
 
 #ifdef USE_OPENGL
-fprintf(stderr,"destroying light %d, ctx %x\n",(GLuint)it,(int)glXGetCurrentContext());
     glDeleteLists((GLuint)it,1);
 #else
     /*Hmm... Maybe if we do resource allocation one of these days there'll
@@ -2602,7 +2602,7 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
 	METHOD_OUT
 	return((P_Void_ptr)0);
     }
-	
+
     ger_debug("gl_ren_mthd: def_ambient\n");
 
 #ifdef USE_OPENGL
@@ -2616,16 +2616,16 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
 
       set_drawing_window(self);
       glNewList( lightlist=glGenLists(1) , GL_COMPILE );
-      glLightfv( light_num, GL_AMBIENT, cvals );
-      glEnable( light_num );
+      glLightfv( LIGHT_NUM(self), GL_AMBIENT, cvals );
+      glEnable( LIGHT_NUM(self) );
       glEndList();
-fprintf(stderr,"defining ambient light list %d, light %d, widget %x, ctx %x\n",
-(int)lightlist,(int)(light_num-GL_LIGHT0),
-(int)WIDGET(self),(int)glXGetCurrentContext());
 
       /* Increment light number, wrapping if necessary */
-      light_num += 1;
-      if (light_num >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) light_num= GL_LIGHT0;
+      LIGHT_NUM(self)= LIGHT_NUM(self) + 1;
+      if (LIGHT_NUM(self) >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) {
+	ger_error("gl_ren_mthd: Warning, recycling light numbers!\n");
+	LIGHT_NUM(self)= GL_LIGHT0;
+      }
 
       METHOD_OUT
       return((P_Void_ptr)lightlist);
@@ -2657,39 +2657,7 @@ void traverse_ambient(P_Void_ptr it, P_Transform *foo,
 #ifdef USE_OPENGL
 
     /* Turn on the given light */
-    fprintf(stderr,"calling ambient light list %d, ctx %x\n",
-	    (int)it,(int)glXGetCurrentContext());
     glCallList((GLuint)it);
-	{
-	  GLboolean flag;
-	  int i;
-	  int found_light;
-	  GLfloat clrs[4];
-	  fprintf(stderr,"**************traversing ambient\n");
-	  fprintf(stderr,"Widget is %x, it is %s\n",
-		  (int)WIDGET(self),glIsList((GLuint)it)?"true":"false");
-	  fprintf(stderr,"ctx is %x, should be %x\n",
-		  (int)glXGetCurrentContext(),(int)GLXCONTEXT(self));
-	  flag= glIsEnabled(GL_COLOR_MATERIAL);
-	  fprintf(stderr,"color_material is %s\n",flag ? "on" : "off");
-	  found_light= 0;
-	  for (i=0; i<100; i++) {
-	    if (glIsEnabled(GL_LIGHT0 + i)) {
-	      fprintf(stderr,"light %d is on\n",i);
-	      found_light++;
-	    }
-	  }
-	  if (!found_light) fprintf(stderr,"No lights on!\n");
-	  glGetBooleanv(GL_LIGHTING,&flag);
-	  if (flag) fprintf(stderr,"lighting is on\n");
-	  else fprintf(stderr,"lighting is off\n");
-	  glGetFloatv(GL_LIGHT_MODEL_AMBIENT , clrs);
-	  fprintf(stderr,"ambient color (%f %f %f %f)\n",
-		  clrs[0],clrs[1],clrs[2],clrs[3]);
-	  glGetFloatv(GL_CURRENT_COLOR, clrs);
-	  fprintf(stderr,"current color (%f %f %f %f)\n",
-		  clrs[0],clrs[1],clrs[2],clrs[3]);
-	}
 
 #else
     /*Ambient lighting sums... at least, the painter renderer seems
@@ -2726,7 +2694,6 @@ void destroy_ambient(P_Void_ptr it) {
     ger_debug("gl_ren_mthd: destroy_ambient\n");
 
 #ifdef USE_OPENGL
-fprintf(stderr,"destroying ambient %d, ctx %x\n",(GLuint)it,(int)glXGetCurrentContext());
     glDeleteLists((GLuint)it,1);
 #else
     /* nothing to be done */
@@ -2932,7 +2899,33 @@ static void destroy_text( P_Void_ptr rendata )
 }
 
 static void ren_print() {
-    ger_debug("gl_ren_mthd: ren_print");
+  P_Renderer *self= (P_Renderer *)po_this;
+  METHOD_IN
+
+  ger_debug("gl_ren_mthd: ren_print");
+  if ( RENDATA(self)->open ) {
+    if (AUTO(self)) {
+      ind_write("RENDERER: GL generator '%s', does not own window, open",
+		self->name); 
+    }
+    else {
+      ind_write("RENDERER: GL generator '%s', owns window, open",
+		self->name); 
+    }
+  }
+  else {
+    if (AUTO(self)) {
+      ind_write("RENDERER: GL generator '%s', does not own window, closed",
+		self->name); 
+    }
+    else {
+      ind_write("RENDERER: GL generator '%s', owns window, closed",
+		self->name); 
+    }
+  }
+  ind_eol();
+
+  METHOD_OUT
 }
 
 static void ren_open() {
@@ -3068,6 +3061,11 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   if ( !(self= (P_Renderer *)malloc(sizeof(P_Renderer))) )
     ger_fatal("po_create_gl_renderer: unable to allocate %d bytes!",
               sizeof(P_Renderer) );
+#ifdef USE_OPENGL
+  sprintf(self->name,"ogl%d",ren_seq_num++);
+#else
+  sprintf(self->name,"ogl%d",ren_seq_num++);
+#endif
 
   /* Create memory for object data */
   if ( !(rdata= (P_Renderer_data *)malloc(sizeof(P_Renderer_data))) )
@@ -3161,6 +3159,7 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      SPHERE_DEFINED(self)= 0;
      CYLINDER(self)= NULL;
      CYLINDER_DEFINED(self)= 0;
+     LIGHT_NUM(self)= GL_LIGHT0;
 #endif
 
      BACKGROUND(self) = (float *)(malloc(4*sizeof(float)));
@@ -3209,8 +3208,8 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      self->destroy_mesh= destroy_object;
 
      self->def_bezier= def_bezier;
-     self->ren_bezier= ren_object;
-     self->destroy_bezier= destroy_object;
+     self->ren_bezier= ren_bezier;
+     self->destroy_bezier= destroy_bezier;
 
      self->def_text= def_text;
      self->ren_text= ren_text;
@@ -3314,6 +3313,9 @@ void init_gl_widget (P_Renderer *self)
      glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
      glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
      glEnable(GL_COLOR_MATERIAL);
+     glEnable(GL_AUTO_NORMAL);
+     glEnable(GL_NORMALIZE);
+
      hastransparent= 0;
 #ifdef never
      if (hastransparent = (glGetIntegerv(GL_BLEND, &gdtmp), gdtmp)) {
@@ -3369,85 +3371,3 @@ void init_gl_widget (P_Renderer *self)
      define_materials(self);
 }
 
-#ifdef never
-The following initialization code from po_create_gl_renderer is
-hopefully junk:
-
-#ifdef USE_OPENGL
-  if (XtIsRealized(WIDGET(self))) {
-    glMatrixMode(GL_MODELVIEW);
-    glClearColor(0.0,0.0,0.0,0.0); 
-    glClear(GL_COLOR_BUFFER_BIT);
-    glXSwapBuffers(XtDisplay(WIDGET(self)), XtWindow(WIDGET(self)));
-    glEnable(GL_DEPTH_TEST); 
-    glDisable(GL_COLOR_MATERIAL);
-    glShadeModel(GL_SMOOTH);
-    hastransparent= 0;
-#ifdef never
-    glDepthFunc(GL_GREATER);
-    if (hastransparent = (glGetIntegerv(GL_BLEND, &gdtmp), gdtmp)) {
-      glBlendFunc(GL_SRC_ALPHA,  GL_ONE_MINUS_SRC_ALPHA); 
-      glEnable(GL_BLEND);
-    }
-    else {
-      /* screen_door_transp() does what's needed */
-    }
-#endif
-    get_drawing_area_size(self,&xsize,&ysize);
-    ASPECT(self)= (float)xsize / (float)ysize;
-    /*Predefine all of our materials...*/
-    define_materials();
-  }
-  else {
-    /* The new_widget_cb() should do this stuff */
-    ASPECT(self)= 1.0;
-  }
-
-#else
-  if (!AUTO(self) || XtIsRealized(WIDGET(self))) {
-    foreground();
-    mmode(MVIEWING);
-    doublebuffer();
-    RGBmode();
-    subpixel(TRUE);
-    if (!AUTO (self)) {
-      gconfig();
-    }
-    cpack(0);
-    clear();
-    swapbuffers();
-    zbuffer(TRUE);
-    lmcolor(LMC_COLOR);
-    glcompat(GLC_ZRANGEMAP, 0);
-    glcompat(GLC_OLDPOLYGON, 1);
-    lsetdepth(getgdesc(GD_ZMAX), getgdesc(GD_ZMIN));
-    zfunction(ZF_GREATER);
-    shademodel(GOURAUD);
-    if (hastransparent = getgdesc(GD_BLEND))
-      blendfunction(BF_SA, BF_MSA);
-    else
-      defpattern(GREYPATTERN, 16, greyPattern);	  
-    
-    LM(self) = (float *)(malloc(9*sizeof(float)));
-    for (lupe = 0; lupe < 9; lupe++)
-      LM(self)[lupe] = initiallm[lupe];
-    
-#ifndef AVOID_NURBS
-    sphmode(SPH_TESS, SPH_BILIN);
-    sphmode(SPH_DEPTH, 4);
-#endif
-    
-    getsize(&xsize, &ysize);
-    ASPECT(self)= (float)xsize / (float)ysize;
-
-    /*Predefine all of our materials...*/
-    define_materials();
-  }
-  else {
-    /* The new_widget_cb() should do this stuff */
-    ASPECT(self)= 1.0;
-  }
-#endif
-  
-
-#endif
