@@ -24,10 +24,6 @@ This module provides renderer methods for the IRIS gl renderer
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#include "p3dgen.h"
-#include "pgen_objects.h"
-#include "ge_error.h"
-#include "assist.h"
 #include <X11/Intrinsic.h>
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
@@ -35,7 +31,6 @@ This module provides renderer methods for the IRIS gl renderer
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glx.h>
-#include <GL/GLwDrawA.h>
 #include <X11/StringDefs.h>
 #include <X11/Shell.h>
 #else
@@ -43,6 +38,10 @@ This module provides renderer methods for the IRIS gl renderer
 #include <gl/gl.h>
 #include <X11/Xirisw/GlxMDraw.h>
 #endif
+#include "p3dgen.h"
+#include "pgen_objects.h"
+#include "ge_error.h"
+#include "assist.h"
 
 #ifndef USE_OPENGL
 #define Object GL_Object
@@ -50,7 +49,12 @@ This module provides renderer methods for the IRIS gl renderer
 #undef Object
 #endif
 
+#include "indent.h"
 #include "gl_strct.h"
+
+#ifdef WIREGL
+#include "wiregl_papi.h"
+#endif
 
 #define GLPROF(x)
 
@@ -76,10 +80,6 @@ static gl_material materials[N_MATERIALS]= {
 };
 
 #ifdef USE_OPENGL
-
-#ifndef MAXLIGHTS
-#define MAXLIGHTS 8
-#endif
 
 #define DEFAULT_WINDOW_GEOMETRY "300x300"
 
@@ -185,34 +185,61 @@ static int ren_seq_num= 0; /* counts gl renderers */
 #define CYL_NUMPOINTSY	(CYL_NUMKNOTSY - CYL_ORDERY)
 
 /* function prototypes */
-static void new_widget_cb (Widget w, P_Renderer *self, XtPointer call_data);
-static void gl_resize_cb(Widget w, P_Renderer *self, XtPointer call_data);
-static P_Renderer *init_gl_normal (P_Renderer *self);
-static void init_gl_widget (P_Renderer *self); 
+static void init_gl_structure (P_Renderer *self); 
+static void init_gl_gl (P_Renderer *self); 
+static void ren_print();
 
-static void get_drawing_area_size( P_Renderer* self, long* x, long* y )
+static void get_drawing_area( P_Renderer* self, 
+			      int *x_corner, int *y_corner, 
+			      unsigned int* width, unsigned int* height )
 {
   /* Assumes set_drawing_window has been called */
+#ifdef WIREGL
+  GLint params[4];
+  glGetIntegerv(GL_VIEWPORT,params);
+  *x_corner= params[0];
+  *y_corner= params[1];
+  *width= params[2];
+  *height= params[3];
+#else
 #ifdef USE_OPENGL
   Arg args[10];
   int n= 0;
-  Dimension height;
-  Dimension width;
-  XtSetArg(args[n],XtNwidth,&width); n++;
-  XtSetArg(args[n],XtNheight,&height); n++;
-  XtGetValues(WIDGET(self),args,n);
-  *x= width;
-  *y= height;
-
+  unsigned int border_width;
+  unsigned int depth;
+  Window root;
+  Status s;
+  if (MANAGE(self)) {
+    s= XGetGeometry(XDISPLAY(self),XWINDOW(self),&root,x_corner,y_corner,
+		    width,height, &border_width, &depth);
+    if (s != True) ger_fatal("Error: XGetGeometry failed!\n");
+    
 #else
-  getsize(x,y);
+    getsize(width,height);
+#endif
+  }
+  else {
+    GLint params[4];
+    glGetIntegerv(GL_VIEWPORT,params);
+    *x_corner= params[0];
+    *y_corner= params[1];
+    *width= params[2];
+    *height= params[3];
+  }
 #endif
 }
 
 static void set_drawing_window( P_Renderer* self )
 {
 #ifdef USE_OPENGL
-  GLwDrawingAreaMakeCurrent(WIDGET(self), GLXCONTEXT(self));
+#ifdef WIREGL
+
+  wireGLMakeCurrent();
+
+#else
+  if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) != True)
+     ger_error("Error: set_drawing_window: unable to set context!\n");
+#endif
 #else
   if (!AUTO (self)) {
     winset(WINDOW(self));
@@ -223,89 +250,157 @@ static void set_drawing_window( P_Renderer* self )
 #endif
 }
 
+static Bool WaitForNotify(Display *d, XEvent *e, char *arg) 
+{
+  return (e->type == MapNotify) && (e->xmap.window == (Window)arg); 
+}
+
 static void attach_drawing_window( P_Renderer* self )
 {
   /* AUTO(self) is always true in here */
-  if (XtIsRealized (WIDGET (self))) {
+
 #ifdef USE_OPENGL
-    XVisualInfo *vi;
-    Arg args[1];
-    XtSetArg(args[0], GLwNvisualInfo, &vi);
-    XtGetValues(WIDGET(self), args, 1);
-    GLXCONTEXT(self)= 
-      glXCreateContext(XtDisplay(WIDGET(self)), vi, 0, GL_FALSE);
-    if (!GLXCONTEXT(self)) {
-      fprintf(stderr,"gl_ren_mthd: attach_drawing_widget: glXCreateContext failed on widget %x; is it a glX widget?\n",(int)(WIDGET(self)));
-    }
-    XtAddCallback(WIDGET(self), GLwNresizeCallback, 
-		  (XtCallbackProc)gl_resize_cb, (XtPointer)self);
+
+#ifdef WIREGL
+
+  wireGLCreateContext();
+  GLXCONTEXT(self)= NULL;
+  XWINDOW(self)= 0;
+    
 #else
-    XtAddCallback (WIDGET (self), GlxNresizeCallback,
-		   (XtCallbackProc) gl_resize_cb, (XtPointer) self);
+
+  XVisualInfo *vi;
+  int attributeList[10];
+  unsigned int width, height;
+  int x, y;
+  XSetWindowAttributes swa;
+  XEvent event;
+  Colormap cmap;
+
+  attributeList[0]= GLX_RGBA;
+  attributeList[1]= GLX_DOUBLEBUFFER;
+  attributeList[2]= None;
+
+  /* First we wait for the parent to be built */
+  get_drawing_area(self, &x, &y, &width, &height); /* works since window is set to parent */
+  
+  vi= glXChooseVisual(XDISPLAY(self), DefaultScreen(XDISPLAY(self)), 
+		      attributeList);
+  if (!vi) {
+    ger_fatal("attach_drawing_window: unable to get a reasonable visual!");
+  }
+  GLXCONTEXT(self)= glXCreateContext(XDISPLAY(self), vi, 0, GL_TRUE);
+
+  if (!GLXCONTEXT(self)) {
+    ger_error("gl_ren_mthd: attach_drawing_widget: glXCreateContext failed; widget or window cannot support GL renderer!\n");
+  }
+  cmap = XCreateColormap(XDISPLAY(self), RootWindow(XDISPLAY(self), vi->screen),
+			 vi->visual, AllocNone);
+  if (!cmap) {
+    ger_fatal("create_drawing_window: XCreateColormap failed unexpectedly!");
+  }
+    
+  /* create the sub window */
+  swa.colormap = cmap;
+  swa.border_pixel = 0;
+  swa.event_mask = StructureNotifyMask;
+  XWINDOW(self)= XCreateWindow(XDISPLAY(self), XWINDOW(self), 0, 0, width, height,
+			       0, vi->depth, InputOutput, vi->visual,
+			       CWBorderPixel|CWColormap|CWEventMask, &swa);
+  if (!XWINDOW(self)) {
+    ger_fatal("attach_drawing_window: XCreateWindow of gl subwindow failed!");
+  }
+
+  /* map the subwindow */
+  if (!XMapWindow(XDISPLAY(self), XWINDOW(self))) {
+    ger_fatal("attach_drawing_window: cannot map created subwindow!");
+  }
+  XIfEvent(XDISPLAY(self), &event, WaitForNotify, (char*)XWINDOW(self));
 #endif
+
+  RENDATA(self)->initialized= 1;
+
+#else
+
+  if (XtIsRealized (WIDGET (self))) {
     set_drawing_window(self);
-    init_gl_widget(self);
+    init_gl_gl(self);
     RENDATA(self)->initialized= 1;
   }
   else {
     ger_fatal("Error: Cannot initialize DrawP3D gl with an unrealized widget!\n");
     /* give up now;  calling sequence error */
   }
+
+#endif
 }
 
 static void create_drawing_window( P_Renderer* self, char* size_info )
 {
   /* AUTO(self) is always false in here */
 #ifdef USE_OPENGL
+
+#ifdef WIREGL
+  
+  wireGLCreateContext();
+  GLXCONTEXT(self)= NULL;
+  XWINDOW(self)= 0;
+
+#else
   {
     Display *dpy;
-    Arg args[10];
+    Window win;
     int n;
     static char* fake_argv[]= {"drawp3d",NULL};
     int fake_argc= 1;
-    Widget shell; /* Parent shell */
-    Widget glw;   /* The GLwDrawingArea widget */
+    XVisualInfo *vi;
+    int attributeList[10];
+    Colormap cmap;
+    GLXContext cx;
+    XEvent event;
+    XSetWindowAttributes swa;
 
-    n= 0;
-    XtSetArg(args[n], XtNgeometry, 
-	     (size_info) ? size_info : DEFAULT_WINDOW_GEOMETRY); n++;
-    XtSetArg(args[n], XtNtitle, NAME(self)); n++;
-    shell= XtOpenApplication(&APPCONTEXT(self), "DRawp3d",
-			     NULL, 0, &fake_argc, fake_argv, NULL,
-			     applicationShellWidgetClass, args, n);
-    n = 0;
-    XtSetArg(args[n], GLwNrgba, TRUE); n++;
-    XtSetArg(args[n], GLwNdoublebuffer, TRUE); n++;
-    XtSetArg(args[n], GLwNdepthSize, 16); n++;
-    glw= XtCreateManagedWidget("glxdrawingarea", glwDrawingAreaWidgetClass, 
-			       shell, args, n);
-    if (!glw) {
-      ger_fatal("create_drawing_window: Unable to draw to your display!\n");
+    attributeList[0]= GLX_RGBA;
+    attributeList[1]= GLX_DOUBLEBUFFER;
+    attributeList[2]= None;
+
+    XDISPLAY(self)= dpy= XOpenDisplay(0);
+    if (!dpy) {
+      ger_fatal("create_drawing_window: unable to access display!");
     }
-
-    WIDGET(self)= glw;
-
-    XtAddCallback(glw, GLwNresizeCallback, 
-		  (XtCallbackProc)gl_resize_cb, (XtPointer)self);
-    XtAddCallback(glw, GLwNginitCallback, (XtCallbackProc)new_widget_cb, 
-		  (XtPointer)self);
-
-    XtManageChild(glw);
-    XtRealizeWidget(shell);
-
-    /* Cleverly stall until initialization is complete */
-    while (!RENDATA(self)->initialized) {
-      XEvent event;
-      if (XtAppPending(APPCONTEXT(self))) { 
-	XtAppNextEvent(APPCONTEXT(self), &event);
-	XtDispatchEvent(&event);
-      }
+    vi= glXChooseVisual(dpy, DefaultScreen(dpy), attributeList);
+    if (!vi) {
+      ger_fatal("create_drawing_window: unable to get a reasonable visual!");
     }
-    glXWaitX();
-    glXWaitGL();
+    GLXCONTEXT(self)= cx= glXCreateContext(dpy, vi, 0, GL_TRUE);
+    if (!cx) {
+      ger_fatal("create_drawing_window: unable to make a GL context!");
+    }
+    cmap = XCreateColormap(dpy, RootWindow(dpy, vi->screen),
+			   vi->visual, AllocNone);
+    if (!cmap) {
+      ger_fatal("create_drawing_window: XCreateColormap failed unexpectedly!");
+    }
+    
+    /* create a window */
+    swa.colormap = cmap;
+    swa.border_pixel = 0;
+    swa.event_mask = StructureNotifyMask;
+    win = XCreateWindow(dpy, RootWindow(dpy, vi->screen), 0, 0, 512, 512,
+			0, vi->depth, InputOutput, vi->visual,
+			CWBorderPixel|CWColormap|CWEventMask, &swa);
+    if (!win) {
+      ger_fatal("create_drawing_window: XCreateWindow failed unexpectedly!");
+    }
+    XWINDOW(self)= win;
+    if (!XMapWindow(dpy, win)) {
+      ger_fatal("create_drawing_window: cannot map created window!");
+    }
+    XIfEvent(dpy, &event, WaitForNotify, (char*)win);
+  }
+#endif
 
     /* OK, the window should be up. */
-  }
 #else
   {
     int result; 
@@ -333,8 +428,6 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
 
     WINDOW(self) = winopen(NAME(self));
     winconstraints();
-    set_drawing_window(self);
-    init_gl_widget(self);
   }
 #endif
 }
@@ -343,15 +436,12 @@ static void release_drawing_window( P_Renderer* self )
 {
   /* Destroys the window if appropriate */
 #ifdef USE_OPENGL
-  if (AUTO(self)) {
-    glXDestroyContext(XtDisplay(WIDGET(self)),GLXCONTEXT(self));
-    /* the rest is owned by the calling app */
-  }
-  else {
-    glXDestroyContext(XtDisplay(WIDGET(self)),GLXCONTEXT(self));
-    XtDestroyWidget(XtParent(WIDGET(self))); /* gets WIDGET(self) too */
-    XtDestroyApplicationContext(APPCONTEXT(self));
-  }
+
+#ifndef WIREGL
+  glXDestroyContext(XDISPLAY(self),GLXCONTEXT(self));
+  XDestroyWindow(XDISPLAY(self),XWINDOW(self));
+#endif
+
 #else
   if (AUTO(self)) {
     /* Doesn't seem to be anything to do, since the caller owns the widget */
@@ -399,7 +489,7 @@ static void define_materials(P_Renderer *self)
   /* in OpenGL, must define materials separately in each context */
   for (lupe=0; lupe < N_MATERIALS; lupe++) {
     GLfloat params[4];
-    set_drawing_window(self);
+    if (MANAGE(self)) set_drawing_window(self);
     glNewList( materials[lupe].obj=glGenLists(1) , GL_COMPILE);
     params[0]= params[1]= params[2]= materials[lupe].ambient;
     params[3]= 1.0;
@@ -448,7 +538,7 @@ static void update_materials(P_Renderer *self, int mat_index)
     CURMATERIAL(self) = 0;
   }
 #ifdef USE_OPENGL
-  set_drawing_window(self);
+  if (MANAGE(self)) set_drawing_window(self);
   glCallList(materials[CURMATERIAL(self)].obj);
 #else
   lmbind(MATERIAL, materials[CURMATERIAL(self)].index);
@@ -953,7 +1043,7 @@ static void ren_object(P_Void_ptr the_thing, P_Transform *transform,
 	
 	/*and render*/
 #ifdef USE_OPENGL
-	set_drawing_window(self);
+	if (MANAGE(self)) set_drawing_window(self);
 	if (it->obj_info.obj) glCallList(it->obj_info.obj);
 #else
 	if (it->obj_info.obj) callobj(it->obj_info.obj);
@@ -1699,6 +1789,11 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
   
   if (RENDATA(self)->open) {
     
+    if (!(RENDATA(self)->initialized)) {
+      init_gl_gl(self);
+      RENDATA(self)->initialized= 1;
+    }
+
     if (primdata) {
       P_Gob *thisgob;
       int error=0;
@@ -1723,26 +1818,48 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
        */
       if (thistrans) {
 	unsigned long cval;
+	unsigned int xsize, ysize;
+	int x_corner, y_corner;
+
 	top_level_call = 1;
 
-	set_drawing_window(self);
-
 #ifdef USE_OPENGL
-	if (!AUTO(self)) {
-	  long xsize, ysize;
+#ifndef WIREGL
+	if (MANAGE(self) && !AUTO(self)) {
+	  /* We have to run a little event loop, because no one else is. */
 	  int event_pending= 1;
-	  /* run a baby event loop */
+	  long event_mask= 
+	    ( StructureNotifyMask | ExposureMask | ButtonPressMask | FocusChangeMask );
 	  while (event_pending) {
 	    XEvent event;
-	    if (XtAppPending(APPCONTEXT(self))) { 
-	      event_pending= 1;
-	      XtAppNextEvent(APPCONTEXT(self), &event);
-	      XtDispatchEvent(&event);
+	    if (XCheckWindowEvent(XDISPLAY(self),XWINDOW(self),
+				  event_mask,&event)) {
+	      /* Think what fun we could have parsing these! */
+	      switch (event.type) {
+	      case CirculateNotify: fprintf(stderr,"CirculateNotify\n"); break;
+	      case ConfigureNotify: fprintf(stderr,"ConfigureNotify\n"); break;
+	      case DestroyNotify: fprintf(stderr,"DestroyNotify\n"); break;
+	      case MapNotify: fprintf(stderr,"MapNotify\n"); break;
+	      case UnmapNotify: fprintf(stderr,"UnmapNotify\n"); break;
+	      }
 	    }
 	    else event_pending= 0;
 	  }
 	}
+#endif
+#endif
+
+	if (MANAGE(self)) set_drawing_window(self);
+	get_drawing_area(self,&x_corner,&y_corner,&xsize,&ysize);
+	ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
+
+#ifdef USE_OPENGL
+#ifdef never
+	glViewport(x_corner,  y_corner, xsize, ysize); 
+#endif
+#ifdef never
 	glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_LIST_BIT );
+#endif
 	GLPROF("Clearing");
 	glClearColor(BACKGROUND(self)[0], BACKGROUND(self)[1], 
 		     BACKGROUND(self)[2], BACKGROUND(self)[3]);
@@ -1752,12 +1869,7 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 		  LOOKAT(self).x, LOOKAT(self).y, LOOKAT(self).z, 
 		  LOOKUP(self).x, LOOKUP(self).y, LOOKUP(self).z);
 #else
-	if (!AUTO(self)) {
-	  long xsize, ysize;
-	  get_drawing_area_size(self,&xsize,&ysize);
-	  ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
-	  viewport (0, xsize + 1, 0, ysize + 1);
-	}
+	viewport (0, xsize + 1, 0, ysize + 1);
 	lmcolor(LMC_COLOR);
 	back = BACKGROUND(self);
 	cval= ((int)((back[0]*255)+0.5))
@@ -1811,12 +1923,19 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
       if (top_level_call) {
 #ifdef USE_OPENGL
 	glPopMatrix();
+#ifdef never
 	glPopAttrib();
-	glXSwapBuffers(XtDisplay(WIDGET(self)),XtWindow(WIDGET(self)));
+#endif
+
+#ifdef WIREGL
+	if (MANAGE(self)) wireGLSwapBuffers();
+#else
+	if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self),XWINDOW(self));
+#endif
 	glFlush();
 #else
 	popmatrix();
-	swapbuffers();
+	if (MANAGE(self)) swapbuffers();
 	gflush();
 #endif
       }
@@ -1856,7 +1975,7 @@ static void traverse_gob( P_Void_ptr primdata, P_Transform *thistrans,
       if (thistrans) {
 	/* Top level call; initialize lighting state and traversal */
 
-	set_drawing_window(self);
+	if (MANAGE(self)) set_drawing_window(self);
 
 	DLIGHTBUFFER(self) = thisgob;
       
@@ -1967,14 +2086,16 @@ static P_Void_ptr def_polyline(char *name, P_Vlist *vertices) {
     ger_debug("gl_ren_mthd: def_polyline\n");
 
     if (! (it = (gl_gob *)malloc(sizeof(gl_gob))))
-	ger_fatal("def_polyline: unable to allocate %d bytes!", sizeof(gl_gob));
+	ger_fatal("def_polyline: unable to allocate %d bytes!", 
+		  sizeof(gl_gob));
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
+    it->obj_info.obj= (GLuint)0;
 #else
     it->color_mode= LMC_COLOR;
-#endif
     it->obj_info.obj= NULL;
+#endif
     it->cvlist= cache_vlist(self, vertices);
 
     METHOD_OUT
@@ -1998,10 +2119,11 @@ static P_Void_ptr def_polygon(char *name, P_Vlist *vertices) {
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
+    it->obj_info.obj= (GLuint)0;
 #else
     it->color_mode= LMC_COLOR;
-#endif
     it->obj_info.obj= NULL;
+#endif
     it->cvlist= cache_vlist(self, vertices);
 
     METHOD_OUT
@@ -2025,10 +2147,11 @@ static P_Void_ptr def_polymarker(char *name, P_Vlist *vertices) {
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
+    it->obj_info.obj= (GLuint)0;
 #else
     it->color_mode= LMC_COLOR;
-#endif
     it->obj_info.obj= NULL;
+#endif
     it->cvlist= cache_vlist(self, vertices);
 
     METHOD_OUT
@@ -2052,10 +2175,11 @@ static P_Void_ptr def_tristrip(char *name, P_Vlist *vertices) {
     
 #ifdef USE_OPENGL
     it->color_mode= 0;
+    it->obj_info.obj= (GLuint)0;
 #else
     it->color_mode= LMC_COLOR;
-#endif
     it->obj_info.obj= NULL;
+#endif
     it->cvlist= cache_vlist(self, vertices);
     METHOD_OUT
     return((P_Void_ptr)it);
@@ -2273,7 +2397,7 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     it->cvlist= NULL;
     
 #ifdef USE_OPENGL
-    set_drawing_window(self);
+    if (MANAGE(self)) set_drawing_window(self);
     glNewList( it->obj_info.obj=glGenLists(1) , GL_COMPILE);
 #else
     makeobj( it->obj_info.obj=genobj() );
@@ -2498,14 +2622,13 @@ static P_Void_ptr def_light(char *name, P_Point *point, P_Color *color) {
       xvals[2]= point->z;
       xvals[3]= 0.0;
 
-      set_drawing_window(self);
+      if (MANAGE(self)) set_drawing_window(self);
       glNewList( lightlist=glGenLists(1) , GL_COMPILE );
       glLightfv( LIGHT_NUM(self), GL_DIFFUSE, cvals );
       glLightfv( LIGHT_NUM(self), GL_SPECULAR, cvals );
       glLightfv( LIGHT_NUM(self), GL_POSITION, xvals );
       glEnable( LIGHT_NUM(self) );
       glEndList();
-
       /* Increment light number, wrapping if necessary */
       LIGHT_NUM(self) = LIGHT_NUM(self) + 1;
       if (LIGHT_NUM(self) >= GL_LIGHT0 + MY_GL_MAX_LIGHTS) {
@@ -2547,7 +2670,6 @@ void traverse_light(P_Void_ptr it, P_Transform *foo,
 			      P_Attrib_List *bar) {
 
     P_Renderer *self = (P_Renderer *)po_this;
-    short the_light = (short)it;
     METHOD_IN
 	
     if (! (RENDATA(self)->open)) {
@@ -2566,7 +2688,7 @@ void traverse_light(P_Void_ptr it, P_Transform *foo,
     if ((LIGHT0 + MAXLIGHTS) == DLIGHTCOUNT(self))
 	return;
 
-    lmbind(DLIGHTCOUNT(self)++, the_light);
+    lmbind(DLIGHTCOUNT(self)++, (short)it);
 #endif
     
     METHOD_OUT
@@ -2581,7 +2703,6 @@ void ren_light(P_Void_ptr it, P_Transform *foo,
 void destroy_light(P_Void_ptr it) {
     
     P_Renderer *self = (P_Renderer *)po_this;
-    short the_light = (short)it;
     METHOD_IN
     if (! (RENDATA(self)->open)) {
 	METHOD_OUT
@@ -2620,7 +2741,7 @@ static P_Void_ptr def_ambient(char *name, P_Color *color) {
       cvals[2]= color->b;
       cvals[3]= color->a;
 
-      set_drawing_window(self);
+      if (MANAGE(self)) set_drawing_window(self);
       glNewList( lightlist=glGenLists(1) , GL_COMPILE );
       glLightfv( LIGHT_NUM(self), GL_AMBIENT, cvals );
       glEnable( LIGHT_NUM(self) );
@@ -2780,7 +2901,11 @@ static void set_camera(P_Void_ptr thecamera) {
     /*Well, it was stashed, and now we get to use it.
       Happy Happy Joy Joy.*/
     
-    set_drawing_window(self);
+    if (MANAGE(self)) set_drawing_window(self);
+    if (!(RENDATA(self)->initialized)) {
+      init_gl_gl(self);
+      RENDATA(self)->initialized= 1;
+    }
 
 #ifdef USE_OPENGL
     {
@@ -2840,20 +2965,9 @@ static void set_camera(P_Void_ptr thecamera) {
 }    
     
 static void destroy_camera(P_Void_ptr thecamera) {
-
-    P_Renderer *self = (P_Renderer *)po_this;
-    METHOD_IN
-	
-    if (! (RENDATA(self)->open)) {
-	METHOD_OUT
-	return;
-    }
-	
     ger_debug("gl_ren_mthd: destroy_camera\n");
 
     /*I don't have anything to deallocate... :)*/
-    
-    METHOD_OUT
 }    
     
 static P_Void_ptr def_text(char *name, char *tstring, P_Point *location,
@@ -2962,7 +3076,7 @@ static void ren_destroy() {
 
     ger_debug("gl_ren_mthd: ren_destroy\n");
 
-    release_drawing_window(self);
+    if (MANAGE(self)) release_drawing_window(self);
 
     METHOD_RDY(ASSIST(self));
     (*(ASSIST(self)->destroy_self))();
@@ -2977,7 +3091,8 @@ static void ren_destroy() {
     METHOD_DESTROYED
 }
 
-static P_Void_ptr def_cmap(char *name, double min, double max, void(*mapfun)(float *, float *, float *, float *, float *)) {
+static P_Void_ptr def_cmap(char *name, double min, double max, 
+			   void(*mapfun)(float *, float *, float *, float *, float *)) {
   P_Renderer *self= (P_Renderer *)po_this;
   P_Renderer_Cmap *thismap;
   METHOD_IN
@@ -3025,12 +3140,12 @@ static void install_cmap(P_Void_ptr mapdata) {
 }
 
 static void destroy_cmap(P_Void_ptr mapdata) {
-  P_Renderer *self= (P_Renderer *)po_this;
-  METHOD_IN
-
+  /* This has to be implemented without reference to "self", like a
+   * class static method, because it may be called to destroy data
+   * after the specific renderer which created it has been destroyed.
+   */
   ger_debug("gl_ren_mthd: destroy_cmap");
-  if ( RENDATA(self)->open ) free( mapdata );
-  METHOD_OUT
+  if ( mapdata ) free( mapdata );
 }
 
 static P_Void_ptr def_gob(char *name, struct P_Gob_struct *gob) {
@@ -3071,7 +3186,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
 #ifdef USE_OPENGL
   sprintf(self->name,"ogl%d",ren_seq_num++);
 #else
-  sprintf(self->name,"ogl%d",ren_seq_num++);
+  sprintf(self->name,"igl%d",ren_seq_num++);
 #endif
 
   /* Create memory for object data */
@@ -3080,11 +3195,16 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
               sizeof(P_Renderer_data) );
   self->object_data= (P_Void_ptr)rdata;
 
+  /* Set some flags */
+  if (strstr (device,"nomanage") != NULL) {
+    MANAGE(self)= 0;
+  }
+  else MANAGE(self)= 1;
   if (strstr (device, "widget=") != NULL) {
     AUTO (self) = 1;
   }
   else AUTO(self)= 0;
-  
+
   /*parse the datastr string*/
   /*At present, because we only take "name" and "size" arguments,
     we're just looking forward for a "n" or a "s", searching forward for the 
@@ -3119,7 +3239,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
       if (name_start && *name_start) {
 	tmp= strchr(name_start,'"'); /* trailing quote */
 	if (tmp) *tmp= '\0';
-	if (name) delete(name);
+	if (name) free(name);
 	name= (char*)malloc(strlen(name_start)+1);
 	strcpy(name,name_start);
       }
@@ -3140,28 +3260,37 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
   
   NAME(self) = name;
   RENDATA(self)->initialized= 0;
+  init_gl_structure(self);
   
   /*start by parsing the size into a geometry spec...*/
   
-  if (AUTO (self)) {
-    char *ptr;
-    
-    device = strstr (device, "widget=");
-    ptr = strchr (device, '=');
-    WIDGET(self) = (Widget) atoi (ptr + 1);
-    attach_drawing_window(self);
-  }
-  else {
-    create_drawing_window(self, size);
+  if (MANAGE(self)) {
+    if (AUTO (self)) {
+      char *ptr;
+      
+      device = strstr (device, "widget=");
+      ptr = strchr (device, '=');
+      WIDGET(self) = (Widget) atoi (ptr + 1);
+      XDISPLAY(self)= XtDisplay(WIDGET(self));
+      XWINDOW(self)= XtWindow(WIDGET(self)); /* we will actually use a subwindow */
+#ifdef never
+      XSynchronize(XDISPLAY(self),True);
+#endif
+      attach_drawing_window(self);
+    }
+    else {
+      create_drawing_window(self, size);
+    }
   }
 
   if (where) free((P_Void_ptr)where);
-  
-  return (init_gl_normal (self));
+
+  if (MANAGE(self)) set_drawing_window(self);
+  return (self);
 }
 
-/* complete gl initalization (note: no actual gl calls here) */
-P_Renderer *init_gl_normal (P_Renderer *self)
+/* complete structure initalization (note: no actual gl calls here) */
+void init_gl_structure (P_Renderer *self)
 {
      register short lupe;
 
@@ -3181,8 +3310,13 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      COLORSYMBOL(self)= create_symbol("color");
      MATERIALSYMBOL(self)= create_symbol("material");
      CURMATERIAL(self) = -1;
+#ifdef USE_OPENGL
+     MAXDLIGHTCOUNT(self) = 0; /* not used under OpenGL */
+     DLIGHTCOUNT(self) = 0; /* not used under OpenGL */
+#else
      MAXDLIGHTCOUNT(self) = MAXLIGHTS; /* not used under OpenGL */
      DLIGHTCOUNT(self) = LIGHT0; /* not used under OpenGL */
+#endif
      DLIGHTBUFFER(self) = NULL;
 
      /* Fill in all the methods */
@@ -3255,69 +3389,27 @@ P_Renderer *init_gl_normal (P_Renderer *self)
      self->def_cmap= def_cmap;
      self->install_cmap= install_cmap;
      self->destroy_cmap= destroy_cmap;
-
-     return (self);
-}
-
-
-static void new_widget_cb (Widget w, P_Renderer *self, XtPointer call_data)
-{
-  if (!RENDATA (self)->initialized) {
-#ifdef USE_OPENGL
-    XVisualInfo *vi;
-    Arg args[1];
-    XtSetArg(args[0], GLwNvisualInfo, &vi);
-    XtGetValues(w, args, 1);
-    GLXCONTEXT(self)= glXCreateContext(XtDisplay(w), vi, 0, GL_FALSE);
-#endif
-    set_drawing_window(self);
-    init_gl_widget (self);
-    RENDATA (self)->initialized = 1;
-  }
-}
-
-static void gl_resize_cb (Widget w, P_Renderer *self, XtPointer call_data)
-{
-#ifdef USE_OPENGL
-     long xsize, ysize;
-     GLwDrawingAreaCallbackStruct *glx = 
-       (GLwDrawingAreaCallbackStruct *) call_data;
-
-     set_drawing_window(self);
-
-     get_drawing_area_size(self,&xsize,&ysize);
-     ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
-     glViewport(0,  0, ( glx->width + 1)-(0)+1, 
-		( glx->height + 1)-( 0)+1); 
-     glScissor(0,  0, ( glx->width + 1)-(0)+1, ( glx->height + 1)-( 0)+1);
-#else
-     long xsize, ysize;
-     GlxDrawCallbackStruct *glx = (GlxDrawCallbackStruct *) call_data;
-
-     set_drawing_window(self);
-
-     getsize (&xsize, &ysize);
-     ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
-     viewport (0, glx->width + 1, 0, glx->height + 1);
-#endif
 }
 
 /* gl calls necessary to complete drawp3d initalization
      after the widget is realized or the window is up
 */
-void init_gl_widget (P_Renderer *self)
+void init_gl_gl (P_Renderer *self)
 {
-     register short lupe;
-     long xsize, ysize;
+     unsigned int xsize, ysize;
+     int xcorner, ycorner;
 
-     RENDATA (self)->initialized = 1;
 #ifdef USE_OPENGL
+
      glMatrixMode(GL_MODELVIEW);
 
      glClearColor(0.0,0.0,0.0,0.0); 
-     glClear(GL_COLOR_BUFFER_BIT);
 
-     glXSwapBuffers(XtDisplay(WIDGET(self)), XtWindow(WIDGET(self)));
+#ifdef WIREGL
+     if (MANAGE(self)) wireGLSwapBuffers();
+#else
+     if (MANAGE(self)) glXSwapBuffers(XDISPLAY(self), XWINDOW(self));
+#endif
      glEnable(GL_DEPTH_TEST);
      glShadeModel(GL_SMOOTH);
      glEnable(GL_LIGHTING);
@@ -3331,7 +3423,7 @@ void init_gl_widget (P_Renderer *self)
 
 #else
      mmode (MVIEWING);
-     if (!AUTO(self)) {
+     if (MANAGE(self) && !AUTO(self)) {
        doublebuffer ();
        RGBmode ();
        gconfig();
@@ -3339,7 +3431,7 @@ void init_gl_widget (P_Renderer *self)
      subpixel (TRUE);
      cpack (0);
      clear ();
-     swapbuffers ();
+     if (MANAGE(self)) swapbuffers ();
      zbuffer (TRUE);
      lmcolor (LMC_COLOR);
 
@@ -3366,8 +3458,8 @@ void init_gl_widget (P_Renderer *self)
 
 #endif
 
-     get_drawing_area_size(self,&xsize,&ysize);
-     ASPECT (self)= (float) xsize / (float) ysize;
+     get_drawing_area(self,&xcorner,&ycorner,&xsize,&ysize);
+     ASPECT (self) = (float) (xsize - 1) / (float) (ysize - 1);
 
      /*Predefine all of our materials...*/
      define_materials(self);
