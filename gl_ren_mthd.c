@@ -768,6 +768,29 @@ static void destroy_object(P_Void_ptr the_thing) {
     METHOD_OUT
 }
 
+static void destroy_mesh(P_Void_ptr the_thing) {
+    
+    gl_gob *it = (gl_gob *)the_thing;
+    P_Renderer *self = (P_Renderer *)po_this;
+
+    METHOD_IN
+
+    ger_debug("gl_ren_mthd: destroy_mesh\n");
+
+#ifdef USE_GL_OBJ
+    destroy_obj(the_thing);
+#else
+    if (it->obj_info.mesh_obj.indices) 
+      free((void*)it->obj_info.mesh_obj.indices);
+    if (it->obj_info.mesh_obj.facet_lengths) 
+      free((void*)it->obj_info.mesh_obj.facet_lengths);
+    if (it->cvlist) free_cached_vlist( it->cvlist );
+    free((void *)it);
+#endif
+
+    METHOD_OUT
+}
+
 static void destroy_sphere(P_Void_ptr the_thing) {
     /*Destroy a sphere.*/
     
@@ -1173,6 +1196,187 @@ static void ren_prim_finish( P_Transform *trans, int screendoor_set )
   }
 }
 
+static void ren_mesh(P_Void_ptr the_thing, P_Transform *transform,
+		     P_Attrib_List *attrs) {
+    
+    /*P_Transform is an struct which contains float d[16];*/
+    /*P_Attrib is a struct of
+        P_Symbol attribute; where P_Symbol is just a P_Void_ptr
+        int type; where type is te value type
+        P_Void_ptr value;
+        and two structs for the next and prev things in the list.
+    */
+
+    P_Renderer *self = (P_Renderer *)po_this;
+    P_Color *pcolor;
+    float col4[4];
+    float vtx[3];
+    float nor[3];
+    P_Material *mat;
+    int screendoor_set= 0;
+    int *facet_lengths;
+    int *indices;
+    int nfacets;
+    float* coords;
+    float* colors;
+    float* normals;
+    int icrd;
+    int iclr;
+    int inrm;
+    int lupe;
+    int loope;
+    METHOD_IN
+	
+    gl_gob *it = (gl_gob *)the_thing;
+    
+    if (RENDATA(self)->open) {
+      ger_debug("gl_ren_mthd: ren_mesh");
+      if (!it) {
+	ger_error("gl_ren_mthd: ren_mesh: null object data found.");
+	METHOD_OUT
+	  return;
+      }
+
+#ifdef USE_GL_OBJ
+      ren_object(the_thing, transform, attrs);
+#else
+      
+      screendoor_set= ren_prim_setup( self, it, transform, attrs );
+
+      if (it->cvlist 
+	  && it->obj_info.mesh_obj.indices 
+	  && it->obj_info.mesh_obj.facet_lengths) {
+
+	facet_lengths= it->obj_info.mesh_obj.facet_lengths;
+	indices= it->obj_info.mesh_obj.indices;
+	nfacets= it->obj_info.mesh_obj.nfacets;
+	coords= it->cvlist->coords;
+	colors= it->cvlist->colors;
+	normals= it->cvlist->normals;
+
+	for (loope=0; loope < nfacets; loope++) {
+#ifdef USE_OPENGL
+	  if (*facet_lengths == 3)
+	    glBegin(GL_TRIANGLES);
+	  else if (*facet_lengths == 4)
+	    glBegin(GL_QUADS);
+	  else
+	    glBegin(GL_POLYGON);
+#else
+	  if (*facet_lengths == 3)
+	    bgntmesh();
+	  else
+	    bgnpolygon();
+#endif
+	  switch(it->cvlist->type) {
+	  case P3D_CVTX:
+	    /*Coordinate vertex list: feed and draw.*/
+	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++) {
+	      icrd= 3* *indices;
+	      vtx[0] = coords[icrd];
+	      vtx[1] = coords[icrd+1];
+	      vtx[2] = coords[icrd+2];
+#ifdef USE_OPENGL
+	      glVertex3fv(vtx);
+#else
+	      v3f(vtx);
+#endif
+	    }
+	    break;
+	  case P3D_CCVTX:
+	    /*Coordinate/color vertex list*/
+	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	      icrd= 3* *indices;
+	      iclr= 4* *indices;
+	      col4[0] = colors[iclr];
+	      col4[1] = colors[iclr+1];
+	      col4[2] = colors[iclr+2];
+	      col4[3] = colors[iclr+3];
+	      vtx[0] = coords[icrd];
+	      vtx[1] = coords[icrd+1];
+	      vtx[2] = coords[icrd+2];
+#ifdef USE_OPENGL
+	      glColor4fv(col4);
+	      glVertex3fv(vtx);
+#else
+	      c4f(col4);
+	      v3f(vtx);
+#endif
+	    }
+	    break;
+	  case P3D_CCNVTX:
+	    /*Coordinate/color/normal vertex list*/
+	    for (lupe=0;lupe < *facet_lengths;lupe++, indices++) {
+	      icrd= 3* *indices;
+	      iclr= 4* *indices;
+	      inrm= 3* *indices;
+	      nor[0] = normals[inrm];
+	      nor[1] = normals[inrm+1];
+	      nor[2] = normals[inrm+2];
+	      col4[0] = colors[iclr];
+	      col4[1] = colors[iclr+1];
+	      col4[2] = colors[iclr+2];
+	      col4[3] = colors[iclr+3];
+	      vtx[0] = coords[icrd];
+	      vtx[1] = coords[icrd+1];
+	      vtx[2] = coords[icrd+2];
+#ifdef USE_OPENGL
+	      glNormal3fv(nor);
+	      glColor4fv(col4);
+	      glVertex3fv(vtx);
+#else
+	      n3f(nor);
+	      c4f(col4);
+	      v3f(vtx);
+#endif
+	    }
+	    break;
+	  case P3D_CNVTX:
+	    /*Coordinate/normal vertex list*/
+	    for (lupe=0;lupe < *facet_lengths; lupe++, indices++) {
+	      icrd= 3* *indices;
+	      inrm= 3* *indices;
+	      nor[0] = normals[inrm];
+	      nor[1] = normals[inrm];
+	      nor[2] = normals[inrm];
+	      vtx[0] = coords[icrd];
+	      vtx[1] = coords[icrd+1];
+	      vtx[2] = coords[icrd+2];
+#ifdef USE_OPENGL
+	      glNormal3fv(nor);
+	      glVertex3fv(vtx);
+#else
+	      n3f(nor);
+	      v3f(vtx);
+#endif
+	    }
+	    break;
+	  default:
+	    printf("gl_ren_mthd: ren_mesh: null vertex type.\n");
+	    break;
+	  } /*switch(vertices->type)*/
+	  
+#ifdef USE_OPENGL
+	  glEnd();
+#else
+	  if (*facet_lengths == 3)
+	    endtmesh();
+	  else
+	    endpolygon();
+#endif
+	  facet_lengths++;
+	}
+      }
+      else ger_error("gl_ren_mthd: ren_mesh: null mesh info found!");
+      ren_prim_finish( transform, screendoor_set );
+
+#endif /* ifdef USE_GL_OBJ */
+
+      /*Gee, wasn't that easy? :)  */
+      METHOD_OUT
+    }
+}
+
 static void ren_sphere(P_Void_ptr the_thing, P_Transform *transform,
 		P_Attrib_List *attrs) {
   P_Renderer *self = (P_Renderer *)po_this;
@@ -1530,7 +1734,7 @@ static P_Void_ptr def_sphere(char *name) {
 #ifdef AVOID_NURBS
     METHOD_RDY(ASSIST(self));
 #ifdef USE_OPENGL
-    SPHERE(self)= result= (*(ASSIST(self)->def_sphere))();
+    result= SPHERE(self)= (*(ASSIST(self)->def_sphere))();
     SPHERE_DEFINED(self)= 1;
 #else
     my_sphere= result= (*(ASSIST(self)->def_sphere))();
@@ -2369,6 +2573,9 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
     P_Renderer *self= (P_Renderer *)po_this;
     gl_gob *it;
     int lupe, loope;
+    int total_indices; 
+    int i;
+    int j;
     float vtx[3];
     float col4[4], nor[3];
     METHOD_IN
@@ -2396,6 +2603,7 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
 		  , sizeof(gl_gob));
     it->cvlist= NULL;
     
+#ifdef USE_GL_OBJ
 #ifdef USE_OPENGL
     if (MANAGE(self)) set_drawing_window(self);
     glNewList( it->obj_info.obj=glGenLists(1) , GL_COMPILE);
@@ -2590,6 +2798,42 @@ static P_Void_ptr def_mesh(char *name, P_Vlist *vertices, int *indices,
 #else
     closeobj();    
 #endif
+
+#else /* ifdef USE_GL_OBJ */
+
+#ifdef USE_OPENGL
+    it->color_mode= 0;
+    it->obj_info.obj= (GLuint)0;
+#else
+    it->color_mode= LMC_COLOR;
+    it->obj_info.obj= NULL;
+#endif
+
+    /* Count total indices */
+    total_indices= 0;
+    for (i=0; i<nfacets; i++) total_indices += facet_lengths[i];
+
+    /* Cache everything */
+    if (!(it->obj_info.mesh_obj.indices= 
+	  (int*)malloc(total_indices*sizeof(int))))
+      ger_fatal("def_mesh: unable to allocate %d bytes!",
+		total_indices*sizeof(int));
+    for (i=0; i<total_indices; i++) 
+      it->obj_info.mesh_obj.indices[i]= indices[i];
+    if (!(it->obj_info.mesh_obj.facet_lengths= 
+	  (int*)malloc(nfacets*sizeof(int))))
+      ger_fatal("def_mesh: unable to allocate %d bytes!",
+		nfacets*sizeof(int));
+    for (i=0; i<nfacets; i++) 
+      it->obj_info.mesh_obj.facet_lengths[i]= facet_lengths[i];
+    it->obj_info.mesh_obj.nfacets= nfacets;
+
+    it->cvlist= cache_vlist(self, vertices);
+
+    
+
+
+#endif /* USE_GL_OBJ */
     
     METHOD_OUT
     return( (P_Void_ptr)it );
@@ -3349,8 +3593,8 @@ void init_gl_structure (P_Renderer *self)
      self->destroy_tristrip= destroy_object;
 
      self->def_mesh= def_mesh;
-     self->ren_mesh= ren_object;
-     self->destroy_mesh= destroy_object;
+     self->ren_mesh= ren_mesh;
+     self->destroy_mesh= destroy_mesh;
 
      self->def_bezier= def_bezier;
      self->ren_bezier= ren_bezier;
