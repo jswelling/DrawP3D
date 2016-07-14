@@ -1,0 +1,174 @@
+#VRML V1.0 ascii
+
+
+ShapeHints {
+   vertexOrdering COUNTERCLOCKWISE
+   shapeType UNKNOWN_SHAPE_TYPE
+}
+FontStyle { size 1 }
+Material {
+   ambientColor 0.5 0.5 0.5
+   diffuseColor 1 1 1
+   specularColor 0.5 0.5 0.5
+   shininess 0.3
+   transparency 0
+}
+PerspectiveCamera {
+   position 200 26 19.9
+   heightAngle 0.925025
+}
+Translation { translation 200 26 19.9 }
+MatrixTransform {
+   matrix -1.49012e-08 -0.100504 0.994937 0
+          1 0 1.49012e-08 0
+          -9.31323e-10 0.994937 0.100504 0
+          0 0 0 1
+}
+Translation { translation -200 -26 -19.9 }
+PointLight {
+   location 0 2 20
+   color 0.7 0.7 0.7
+}
+DEF thisgob Separator {
+   Separator {
+      Material {
+         ambientColor 0.5 0.5 0.5
+         diffuseColor 0 0 1
+         specularColor 0.5 0.5 0.5
+         shininess 0.3
+         transparency 0
+      }
+      Separator {
+         Separator {
+            Coordinate3 {
+               point [ 
+               35.45 -40.1 -19.9,
+               35.45 92.1 -19.9,
+            ]} 
+            IndexedLineSet { coordIndex[
+               0,1,-1,
+            ]}
+         }
+         Separator {
+            Coordinate3 {
+               point [ 
+               35.45 -40.1 10,
+               35.45 92.1 10,
+            ]} 
+            IndexedLineSet { coordIndex[
+               0,1,-1,
+            ]}
+         }
+         Separator {
+            Coordinate3 {
+               point [ 
+               -42.1 -40.1 10,
+               -42.1 92.1 10,
+            ]} 
+            IndexedLineSet { coordIndex[
+               0,1,-1,
+            ]}
+         }
+         Separator {
+            Coordinate3 {
+               point [ 
+               -42.1 -40.1 -19.9,
+               -42.1 92.1 -19.9,
+            ]} 
+            IndexedLineSet { coordIndex[
+               0,1,-1,
+            ]}
+         }
+         Separator {
+            Coordinate3 {
+               point [ 
+               -42.1 92.1 -19.9,
+               35.45 92.1 -19.9,
+               35.45 92.1 10,
+               -42.1 92.1 10,
+               -42.1 92.1 -19.9,
+            ]} 
+            IndexedLineSet { coordIndex[
+               0,1,2,3,4,-1,
+            ]}
+         }
+         Separator {
+            Coordinate3 {
+               point [ 
+               -42.1 -40.1 -19.9,
+               35.45 -40.1 -19.9,
+               35.45 -40.1 10,
+               -42.1 -40.1 10,
+               -42.1 -40.1 -19.9,
+            ]} 
+            IndexedLineSet { coordIndex[
+               0,1,2,3,4,-1,
+            ]}
+         }
+      }
+   }
+   Separator {
+      Separator {
+         Coordinate3 {
+            point [ 
+            -10 0 0,
+            10 0 0,
+            0 10 0,
+            0 0 10,
+            -1.2 -2.3 -14,
+            -30.4 92.1 -10,
+            35.45 34.3 -19.9,
+            -42.1 65.3 -9.3,
+            -20.6 30.5 -14.3,
+            34.2 -40.1 -15.3,
+            -3 59 3,
+            -5 59 3,
+            -1 57 3,
+            -8 61 3,
+            -6 70 3,
+         ]} 
+         MaterialBinding { value PER_VERTEX_INDEXED }
+         Material {
+            ambientColor 0.5 0.5 0.5
+            diffuseColor [
+               0.604743 0.604743 0.395257,
+               0.604743 0.604743 0.395257,
+               0.604743 0.604743 0.395257,
+               1 1 0,
+               0.0513834 0.0513834 0.948617,
+               0.209486 0.209486 0.790514,
+               0 0 1,
+               0.237154 0.237154 0.762846,
+               0.0395257 0.0395257 0.960474,
+               0 0 1,
+               0.72332 0.72332 0.27668,
+               0.72332 0.72332 0.27668,
+               0.72332 0.72332 0.27668,
+               0.72332 0.72332 0.27668,
+               0.72332 0.72332 0.27668,
+               ]
+            specularColor 0.5 0.5 0.5
+            shininess 0.3
+            transparency 0
+         }
+         IndexedFaceSet { coordIndex [
+            8, 12, 11, -1,
+            8, 11, 13, -1,
+            7, 8, 13, -1,
+            7, 13, 14, -1,
+            6, 14, 12, -1,
+            5, 7, 14, -1,
+            2, 6, 12, -1,
+            2, 12, 8, -1,
+            1, 3, 4, -1,
+            1, 4, 9, -1,
+            1, 9, 6, -1,
+            1, 6, 2, -1,
+            1, 2, 3, -1,
+            0, 3, 2, -1,
+            0, 4, 3, -1,
+            0, 2, 8, -1,
+         ]}
+      }
+   }
+}

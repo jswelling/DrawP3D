@@ -1,0 +1,75 @@
+#VRML V1.0 ascii
+
+
+ShapeHints {
+   vertexOrdering COUNTERCLOCKWISE
+   shapeType UNKNOWN_SHAPE_TYPE
+}
+FontStyle { size 1 }
+Material {
+   ambientColor 0.5 0.5 0.5
+   diffuseColor 1 1 1
+   specularColor 0.5 0.5 0.5
+   shininess 0.3
+   transparency 0
+}
+PerspectiveCamera {
+   position 0 0 20
+   heightAngle 0.785398
+}
+Translation { translation 0 0 20 }
+MatrixTransform {
+   matrix 1 0 0 0
+          0 1 0 0
+          0 0 1 0
+          0 0 0 1
+}
+Translation { translation 0 0 -20 }
+PointLight {
+   location 0 2 20
+   color 0.7 0.7 0.7
+}
+DEF mygob Separator {
+   Separator {
+      Material {
+         ambientColor 0.5 0.5 0.5
+         diffuseColor 0 0 1
+         specularColor 0.5 0.5 0.5
+         shininess 0.3
+         transparency 0
+      }
+      Separator {
+         MatrixTransform {
+            matrix 0.443626 -0.140935 -0.182574 0
+                   -0.140935 0.147661 -0.456435 0
+                   2 5 1 0
+                   2 0 0 1
+         }
+         Separator {
+            Transform {
+               translation 0 0 0.5
+               rotation 1 0 0 1.5707963
+            }
+            Cylinder { height 1}
+         }
+      }
+   }
+   Separator {
+      MatrixTransform {
+         matrix 1 0 0 0
+                0 1 0 0
+                0 0 1 0
+                4 5 1 1
+      }
+      Sphere {}
+   }
+   Separator {
+      MatrixTransform {
+         matrix 1 0 0 0
+                0 1 0 0
+                0 0 1 0
+                2 0 0 1
+      }
+      Sphere {}
+   }
+}

@@ -1,0 +1,116 @@
+#VRML V1.0 ascii
+
+
+ShapeHints {
+   vertexOrdering COUNTERCLOCKWISE
+   shapeType UNKNOWN_SHAPE_TYPE
+}
+FontStyle { size 1 }
+Material {
+   ambientColor 0.5 0.5 0.5
+   diffuseColor 1 1 1
+   specularColor 0.5 0.5 0.5
+   shininess 0.3
+   transparency 0
+}
+PerspectiveCamera {
+   position 0 0 10
+   heightAngle 0.925025
+}
+Translation { translation 0 0 10 }
+MatrixTransform {
+   matrix 1 0 0 0
+          0 1 0 0
+          0 0 1 0
+          0 0 0 1
+}
+Translation { translation 0 0 -10 }
+PointLight {
+   location 0 20 20
+   color 0.7 0.7 0.7
+}
+DEF mygob Separator {
+   MatrixTransform {
+      matrix 1 0 0 0
+             0 1 0 0
+             0 0 1 0
+             0 0 0 1
+   }
+   DEF h2o Separator {
+      Material {
+         ambientColor 0.5 0.5 0.5
+         diffuseColor 0 0 1
+         specularColor 0.5 0.5 0.5
+         shininess 0.3
+         transparency 0
+      }
+      Separator {
+         Coordinate3 {
+            point [ 
+            0.854821 -0.48779 0,
+            0 0.121948 0,
+            -0.854821 -0.48779 0,
+         ]} 
+         IndexedLineSet { coordIndex[
+            0,1,2,-1,
+         ]}
+      }
+      Separator {
+         MatrixTransform {
+            matrix 1 0 0 0
+                   0 1 0 0
+                   0 0 1 0
+                   0 0.121948 0 1
+         }
+         DEF oxygen Separator {
+            Material {
+               ambientColor 0.5 0.5 0.5
+               diffuseColor 1 0 0
+               specularColor 0.5 0.5 0.5
+               shininess 0.3
+               transparency 0
+            }
+            MatrixTransform {
+               matrix 0.35 0 0 0
+                      0 0.35 0 0
+                      0 0 0.35 0
+                      0 0 0 1
+            }
+            Sphere {}
+         }
+      }
+      Separator {
+         MatrixTransform {
+            matrix 1 0 0 0
+                   0 1 0 0
+                   0 0 1 0
+                   -0.854821 -0.48779 0 1
+         }
+         DEF hydrogen Separator {
+            Material {
+               ambientColor 0.5 0.5 0.5
+               diffuseColor 1 1 1
+               specularColor 0.5 0.5 0.5
+               shininess 0.3
+               transparency 0
+            }
+            MatrixTransform {
+               matrix 0.3 0 0 0
+                      0 0.3 0 0
+                      0 0 0.3 0
+                      0 0 0 1
+            }
+            Sphere {}
+         }
+      }
+      Separator {
+         MatrixTransform {
+            matrix 1 0 0 0
+                   0 1 0 0
+                   0 0 1 0
+                   0.854821 -0.48779 0 1
+         }
+         USE hydrogen
+      }
+   }
+}
