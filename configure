@@ -239,6 +239,8 @@ foreach dirname ( /lib /usr/lib /usr/local/lib \
 end  
 if ( $has_fltk_incl && $has_fltk_lib ) then
   echo "FLTK support is present!"
+  echo "  lib is in" $has_fltk_lib_dir
+  echo "  include files are in" $has_fltk_incl_dir
   set has_fltk = 1
 endif
 

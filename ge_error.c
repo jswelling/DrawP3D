@@ -19,19 +19,20 @@
 This module provides error handling.
 */
 
-/* If USE_VARARGS below is set, varargs.h-type parameter list handling
+/* If USE_STDARGS below is set, varargs.h-type parameter list handling
  * will be done.  Otherwise, a method which 'usually' works is used.
  */
-#define USE_VARARGS 1
+#define USE_STDARGS 1
 
 #ifdef VMS
 #include stdio
 #else
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #endif
-#ifdef USE_VARARGS
-#include <varargs.h>
+#ifdef USE_STDARGS
+#include <stdarg.h>
 #endif
 
 /* boolean values */
@@ -43,7 +44,7 @@ typedef int boolean;
 #define maxname 20
 static char name[maxname+1];
 
-#ifdef USE_VARARGS
+#ifdef USE_STDARGS
 static va_list ap;
 static char *p, *sval;
 static int ival;
@@ -54,7 +55,7 @@ static double dval;
 static char messagebuf[maxstring+maxname+3];
 #endif
 
-/* The following macro simulates the action of fprintf in an USE_VARARGS
+/* The following macro simulates the action of fprintf in an USE_STDARGS
  * environment.  Unfortunately it currently doesn't implement the full
  * functionality of fprintf. */
 #define parsing_macro {\
@@ -87,6 +88,8 @@ static char messagebuf[maxstring+maxname+3];
   va_end(ap); \
 } /* end of parsing macro */
 
+
+
 /* Debugging on if the following variable is 'TRUE'. */
 static boolean debugmode= FALSE;
 
@@ -109,44 +112,44 @@ void ger_toggledebug()
         else debugmode= TRUE;
 }
 
-#ifdef USE_VARARGS
-void ger_error(msg,va_alist)
-char *msg;
-va_dcl
+#ifdef USE_STDARGS
+void ger_error(char* msg, ...)
 /* This routine prints an error message.  */
 {
+  va_list ap;
   (void) fputs(name, stderr);
   (void) fputs(": ", stderr);
-  parsing_macro;
-  putc( '\n', stderr );
+  va_start(ap, msg);
+  (void) vfprintf(stderr, msg, ap);
+  va_end(ap);
 }
 
-void ger_debug(msg, va_alist)
-char *msg;
-va_dcl
+void ger_debug(char* msg, ...)
 /* This routine prints a debugging message, if debugging is on. */
 {
+  va_list ap;
   if (debugmode) {
     (void) fputs(name, stderr);
     (void) fputs(": ", stderr);
-    parsing_macro;
-    putc( '\n', stderr );
+    va_start(ap, msg);
+    (void) vfprintf(stderr, msg, ap);
+    va_end(ap);
   }
 }
 
-void ger_fatal(msg,va_alist)
-char *msg;
-va_dcl
+void ger_fatal(char* msg,...)
 /* This routine prints an error message and exits. */
 {
+  va_list ap;
   (void) fputs(name, stderr);
   (void) fputs(": ", stderr);
-  parsing_macro;
-  putc( '\n', stderr );
+  va_start(ap, msg);
+  (void) vfprintf(stderr, msg, ap);
+  va_end(ap);
   (void) exit(2);
 }
 
-#else /* USE_VARARGS not set */
+#else /* USE_STDARGS not set */
 void ger_debug(msg,p1,p2,p3,p4,p5)
 char *msg;
 int p1,p2,p3,p4,p5;

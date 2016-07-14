@@ -332,6 +332,7 @@ static void get_drawing_area( P_Renderer* self,
   Window root;
   Status s;
   if (MANAGE(self) && !chromium_in_use()) {
+    fprintf(stderr,"Window %ld, display %ld\n",XWINDOW(self),XDISPLAY(self));
     s= XGetGeometry(XDISPLAY(self),XWINDOW(self),&root,x_corner,y_corner,
 		    width,height, &border_width, &depth);
     if (s != True) ger_fatal("Error: XGetGeometry failed!\n");
@@ -358,7 +359,11 @@ static void set_drawing_window( P_Renderer* self )
   wireGLMakeCurrent();
 #else
   if (chromium_in_use()) {
+    fprintf(stderr,"######## Rank %d Calling glMakeCurrentCR from set_drawing_window!\n",
+	    RANK(self));
     glMakeCurrentCR(XWINDOW(self), CRCONTEXT(self));
+    fprintf(stderr,"######## Rank %d back from glMakeCurrentCR!\n",
+	    RANK(self));
   }
   else {
     if (glXMakeCurrent(XDISPLAY(self), XWINDOW(self), GLXCONTEXT(self)) 
@@ -404,8 +409,11 @@ static void attach_drawing_window( P_Renderer* self )
       ger_error("glCreateContextCR() call failed!\n");
       return;
     }
+    fprintf(stderr,"######## Rank %d Calling glMakeCurrentCR from attach_drawing_window!\n",
+	    RANK(self));
     glMakeCurrentCR(XWINDOW(self), CRCONTEXT(self));
-    glBarrierCreateCR(BARRIER(self), NPROCS(self));
+    fprintf(stderr,"######## Rank %d back from glMakeCurrentCR!\n",
+	    RANK(self));
     
     GLXCONTEXT(self)= NULL;
   }
@@ -502,8 +510,11 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
       return;
     }
     XWINDOW(self)= glXGetCurrentDrawable();
+    fprintf(stderr,"######## Rank %d Calling glMakeCurrentCR from create_drawing_window!\n",
+	    RANK(self));
     glMakeCurrentCR( XWINDOW(self), CRCONTEXT(self) );
-    glBarrierCreateCR(BARRIER(self), NPROCS(self));
+    fprintf(stderr,"######## Rank %d back from glMakeCurrentCR\n",
+	    RANK(self));
     
     GLXCONTEXT(self)= NULL;
   }
@@ -591,6 +602,32 @@ static void create_drawing_window( P_Renderer* self, char* size_info )
 
     WINDOW(self) = winopen(NAME(self));
     winconstraints();
+  }
+#endif
+}
+
+static void release_drawing_window( P_Renderer* self )
+{
+  /* Destroys the window if appropriate */
+  if (!MANAGE(self)) return;
+#ifdef USE_OPENGL
+  if (chromium_in_use()) {
+    glDestroyContextCR(CRCONTEXT(self));
+    CRCONTEXT(self)= -1;
+    XWINDOW(self)= 0;
+  }
+  else {
+    glXDestroyContext(XDISPLAY(self),GLXCONTEXT(self));
+    GLXCONTEXT(self)= 0;
+    XDestroyWindow(XDISPLAY(self),XWINDOW(self));
+    XWINDOW(self)= 0;
+  }
+#else
+  if (AUTO(self)) {
+    /* Doesn't seem to be anything to do, since the caller owns the widget */
+  }
+  else {
+    winclose(WINDOW(self));
   }
 #endif
 }
@@ -2230,7 +2267,9 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 	if (NPROCS(self)>1) glBarrierExec(BARRIER(self));
 #else
 	if (chromium_in_use()) {
+	  fprintf(stderr,"######## proc %d at glBarrierExecCR pt 1\n",RANK(self));
 	  glBarrierExecCR( BARRIER(self) );
+	  fprintf(stderr,"######## proc %d after glBarrierExecCR pt 1\n",RANK(self));
 	}
 #endif
 	GLPROF("BuildingCoordTrans")
@@ -2306,7 +2345,15 @@ static void ren_gob(P_Void_ptr primdata, P_Transform *thistrans,
 
 #else
 	if (chromium_in_use()) {
+	  fprintf(stderr,"######## proc %d at glBarrierExecCR pt 2\n",RANK(self));
 	  glBarrierExecCR( BARRIER(self) );
+	  fprintf(stderr,"######## proc %d after glBarrierExecCR pt 2\n",RANK(self));
+	}
+
+	if (chromium_in_use()) {
+	  /* The crserver only executes the SwapBuffers() for the 0th client.
+	   * No need to test for rank==0 as we used to do.
+	   */
 	  if (RANK(self)==0) glSwapBuffersCR(0, 0);
 	  else glSwapBuffersCR(0, CR_SUPPRESS_SWAP_BIT);
 	}
@@ -3718,43 +3765,30 @@ static void ren_destroy() {
 
   ger_debug("gl_ren_mthd: ren_destroy\n");
 
-  glFinish(); /* in case any geometry is still in the pipe */
+  if (MANAGE(self)) release_drawing_window(self);
 
-#ifdef USE_OPENGL
-#ifdef WIREGL
-  if (NPROCS(self)>1) glBarrierDestroy(BARRIER(self));
-#else
-  if (chromium_in_use()) {
-    glBarrierExecCR( BARRIER(self) );
-    glBarrierDestroyCR( BARRIER(self) );
-    if (MANAGE(self)){
-      glDestroyContextCR(CRCONTEXT(self));
-      CRCONTEXT(self)= -1;
-      XWINDOW(self)= 0;
-    }
-  }
-  else {
-    if (MANAGE(self)) {
-      glXDestroyContext(XDISPLAY(self),GLXCONTEXT(self));
-      GLXCONTEXT(self)= 0;
-      XDestroyWindow(XDISPLAY(self),XWINDOW(self));
-      XWINDOW(self)= 0;
-    }
-  }
-#endif
-#else
-  winclose(WINDOW(self));
-  free( (P_Void_ptr)LM(self) );
-#endif
   METHOD_RDY(ASSIST(self));
   (*(ASSIST(self)->destroy_self))();
     
   free( (P_Void_ptr)NAME(self) );
   free( (P_Void_ptr)BACKGROUND(self) );
   free( (P_Void_ptr)AMBIENTCOLOR(self) );
+#ifdef USE_OPENGL
+#ifdef WIREGL
+  if (NPROCS(self)>1) glBarrierDestroy(BARRIER(self));
+#else
+  if (CRCONTEXT(self)>0) {
+    glDestroyContextCR(CRCONTEXT(self));
+    CRCONTEXT(self)= -1;
+  }
+  if (chromium_in_use()) glBarrierDestroyCR( BARRIER(self) );
+#endif
+#else
+  free( (P_Void_ptr)LM(self) );
+#endif
   free ((P_Void_ptr)self);
   METHOD_DESTROYED
-}
+    }
 
 static P_Void_ptr def_cmap(char *name, double min, double max, 
 			   void(*mapfun)(float *, float *, float *, float *, float *)) {
@@ -3955,9 +3989,11 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
 	WIDGET(self) = 0;
 	XDISPLAY(self)= XOpenDisplay(0);
 	/* we will actually use a subwindow, but save this window for now */
+	fprintf(stderr,"device <%s> -> window <%s>\n",device,ptr+1);
 	XWINDOW(self)= (Window) atoi (ptr + 1);
       }
       else ger_fatal("po_create_gl_renderer: failed to parse device string!\n");
+      fprintf(stderr,"Window is %ld\n",(long)XWINDOW(self));
 #ifdef never
       XSynchronize(XDISPLAY(self),True);
 #endif
@@ -3979,6 +4015,7 @@ P_Renderer *po_create_gl_renderer( char *device, char *datastr )
       CRCONTEXT(self)= glGetCurrentContextCR();
       XWINDOW(self)= glXGetCurrentDrawable();
     }
+    glBarrierCreateCR(BARRIER(self), NPROCS(self));
   }
 
   if (size) free(size);
@@ -4132,7 +4169,9 @@ static void init_gl_gl (P_Renderer *self)
 #endif
 #else
   if (chromium_in_use()) {
+    fprintf(stderr,"######## proc %d at glBarrierExecCR pt 3\n",RANK(self));
     glBarrierExecCR( BARRIER(self) );
+    fprintf(stderr,"######## proc %d at glBarrierExecCR pt 3\n",RANK(self));
   }
   else {
     /* Do nothing */

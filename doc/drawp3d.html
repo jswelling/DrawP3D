@@ -10,7 +10,7 @@
 	  <UL>
 	    <LI> <A HREF="#P3D">P3D</A>
 	    <LI> <A HREF="#PAINTER">Painter</A>
-	    <LI> <A HREF="#GL">OpenGL</A>
+	    <LI> <A HREF="#GL">GL</A>
 	    <LI> <A HREF="#PVM">PVM</A>
 	    <LI> <A HREF="#IV">Open Inventor</A>
 	    <LI> <A HREF="#VRML">VRML</A>
@@ -140,7 +140,7 @@ only the first 63 characters of the string given are used.
 Several renderers are currently supported, including the P3D renderer,
 two versions of the Painter renderer, Open Inventor, VRML, PVM, and a 
 renderer which uses
-OpenGL.  See the appropriate sections below for
+Silicon Graphics' GL.  See the appropriate sections below for
 information on these renderers.
 <p>
 
@@ -266,37 +266,32 @@ the windows will open and draw properly but will not resize correctly.
 Other systems may also fail.
 <p>
 
-<H2><A NAME="GL">OpenGL Renderer</A></H2>
+<H2><A NAME="GL">GL Renderer</A></H2>
 
 When the second parameter string to the renderer creation function is
-"gl", an interface to the OpenGL graphics library is
-created.  (For backward compatibility, this renderer can be compiled to
-use the now-obsolete Silicon Graphics IrisGL API instead).
-This allows high-speed rendering of DrawP3D models on
+"gl", an interface to the Silicon Graphics GL graphics library is
+created.  This allows high-speed rendering of DrawP3D models on
 displays which support GL.  You may create as many GL renderers as
 you want;  they can all operate independently at the same time.
+The GL renderer can use either the IRIS GL library (along with libsphere)
+or the OpenGL library, depending on options set when the DrawP3D library
+is compiled.
 <p>
 
 In creating a GL renderer, the third parameter string to the renderer
-creation function can be used to specify an Xt widget or window into which 
-to render.
-
-If a widget or window is specified, the user program is responsible
-for running an X Window System main loop to support event processing.
-Specify the widget by passing "widget=n" to the third renderer
-creation parameter string, where n is the ascii string version of the
-X Toolkit Widget id.  Note that the widget must be realized at the
-time the GL renderer is initialized.  Specifiy a window by passing
-"window=m" to the third creation parameter string, where m is the
-ascii string version of the X Window ID.
-
-
-If no widget or window is specified, DrawP3D will pop up a window for drawing,
-and do its poor best to keep track of window management events.
-
-(Under IRIS GL, a widget of type GlxDraw or GlxMDraw must be used.
+creation function can be used to specify a widget into which to render.
+Under IRIS GL, this widget must be of type GlxDraw or GlxMDraw, while 
+under OpenGL it must be of type GLwDrawingArea or GLwMDrawingArea.  
 The widget must be created such that it supports RGBA drawing,
-Z buffering, and double buffering.)
+Z buffering, and double buffering.  If a widget is specified, the
+user program is responsible for running an X Window System main loop
+to support event processing.  Specify the widget by passing
+"widget=n" to the third renderer creation parameter string, where
+n is the ascii string version of the X Toolkit Widget id.  
+Note that the widget must be realized at the time the GL renderer
+is initialized.  If no
+widget is specified, DrawP3D will pop up a window for drawing, and
+do its poor best to keep track of window management events.
 
 <p>
 The fourth parameter string
@@ -310,11 +305,11 @@ following string would produce a window with the given title and size:
 	title="my_window",geometry="256x256+0+0"
 </PRE>
 <p>
-
-Obviously the geometry information will be ignored if a widget or window is
-specified as described above.  Note that the entire character string
-must be enclosed in quotes, and the internal quotes around the entries
-must be protected in the usual ways for the programming language used.
+Obviously the geometry information will be ignored if a widget is
+specified as described above.
+Note that the entire character string must be enclosed in quotes, and
+the internal quotes around the entries must be protected in the usual
+ways for the programming language used.
 <p>
 A parallel program running under MPI or PVM can use the GL renderer if
 the renderer has been compiled with support for the WireGL or Chromium
@@ -325,7 +320,7 @@ string to
 <PRE>
         nprocs=7,rank=3
 </PRE>
-(substituting the appropriate values for number of processes and rank).  
+(substituting the appropriate values for number of processes and rank.  
 The GL renderer makes no MPI or PVM calls of its own.  The rank=0 process
 handles certain housekeeping tasks like screen clearing and buffer swapping.
 Note that nprocs is the number of processes actually using this GL renderer, 

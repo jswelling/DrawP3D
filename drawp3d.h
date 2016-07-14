@@ -47,7 +47,7 @@ extern "C" {
 #endif
   
 /* DrawP3D version */
-#define P3D_DRAWP3D_VERSION 3.2
+#define P3D_DRAWP3D_VERSION 3.3
   
 /* Overall control routines */
 extern int dp_shutdown ___(( void ));

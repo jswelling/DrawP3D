@@ -19,6 +19,7 @@ This module provides support for renderers which do not have the
 capability to manage all necessary primitives.  It provides simple
 geometrical primitives using the renderer's mesh facility.
 */
+#include <stdio.h>
 #include <math.h>
 #include "p3dgen.h"
 #include "pgen_objects.h"
@@ -44,7 +45,7 @@ static P_Void_ptr build_mesh( P_Renderer *ren, int vcount, float varray[][3],
 			  (float *)narray );
 
   /* Have the renderer create the mesh */
-  sprintf(name,"$$p3d_assist_prim_mesh_%d",id++);
+  snprintf((char*)name,sizeof(name),"$$p3d_assist_prim_mesh_%d",id++);
   METHOD_RDY(ren);
   result= (*(ren->def_mesh))(name, vlist, connect, vert_per_facet, fcount);
 

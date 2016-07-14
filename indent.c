@@ -22,9 +22,11 @@ This package provides an 'indented writing' capability.
  * varargs.h-type parameter lists are used.  Otherwise, a system which
  * 'usually' works is used.
  */
-#define USE_VARARGS 1
+#define USE_VARARGS 0
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef SUN_SPARC
 #include <varargs.h>
@@ -45,10 +47,6 @@ This package provides an 'indented writing' capability.
 #include "ge_error.h"
 #include "indent.h"
 
-/* 
-Potential bug:  no length checking is done on strings written to convbuf,
-so overflows are possible. 
-*/
 #define convbufsize 512
 #define maxline 129
 #define tabstep 3
@@ -109,11 +107,11 @@ void ind_write(char *string, ...)
     switch (*++p) {
     case 'd':
       ival= va_arg(ap,int);
-      sprintf(convbuf,"%d",ival);
+      snprintf(convbuf,convbufsize,"%d",ival);
       break;
     case 'f':
       dval= va_arg(ap,double);
-      sprintf(convbuf,"%f",dval);
+      snprintf(convbuf,convbufsize,"%f",dval);
       break;
     case 's':
       sval= va_arg(ap,char*);
@@ -122,7 +120,7 @@ void ind_write(char *string, ...)
       break;
     case 'c':
       cval= va_arg(ap,int);
-      sprintf(convbuf,"%c",cval);
+      snprintf(convbuf,convbufsize,"%c",cval);
       break;
     default:
       convbuf[0]= *p;
@@ -161,11 +159,11 @@ va_dcl /* declare the va_list parameter */
     switch (*++p) {
     case 'd':
       ival= va_arg(ap,int);
-      sprintf(convbuf,"%d",ival);
+      snprintf(convbuf,convbufsize,"%d",ival);
       break;
     case 'f':
       dval= va_arg(ap,double);
-      sprintf(convbuf,"%f",dval);
+      snprintf(convbuf,convbufsize,"%f",dval);
       break;
     case 's':
       sval= va_arg(ap,char*);
@@ -174,7 +172,7 @@ va_dcl /* declare the va_list parameter */
       break;
     case 'c':
       cval= va_arg(ap,char);
-      sprintf(convbuf,"%c",cval);
+      snprintf(convbuf,convbufsize,"%c",cval);
       break;
     default:
       convbuf[0]= *p;
@@ -195,7 +193,7 @@ char *string;
 int p1, p2, p3, p4, p5, p6;
 /* This routine adds text to the line buffer */
 {
-        sprintf(convbuf, string, p1, p2, p3, p4, p5, p6 );
+        snprintf(convbuf,convbufsize, string, p1, p2, p3, p4, p5, p6 );
         if (inpoint<endpoint) {
                 (void)strncpy( inpoint, convbuf, (int)(endpoint-inpoint+1) );
                 inpoint= inpoint + strlen(inpoint);

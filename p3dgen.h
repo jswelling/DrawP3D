@@ -26,6 +26,9 @@ This include file defines the entry points provided by p3dgen.
 extern "C" {
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 /* Include prototypes unless requested not to.  NO_SUB_PROTO causes
  * all function prototypes not explicitly associated with an 'extern'ed
  * function to be omitted.  NO_PROTO causes all prototypes to be omitted.
@@ -62,7 +65,7 @@ typedef char *P_Void_ptr;
 #endif
 
 /* P3dgen version */
-#define P3D_P3DGEN_VERSION 3.2
+#define P3D_P3DGEN_VERSION 3.3
 
 /* Error codes */
 #define P3D_SUCCESS 1

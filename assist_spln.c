@@ -28,6 +28,7 @@ Bezier patch implementation notes:
      actual (analytical) normals to the spline patch are *not* used;
      the computational cost seemed too great for the benefit.
 */
+#include <stdio.h>
 #include <math.h>
 #include "p3dgen.h"
 #include "pgen_objects.h"

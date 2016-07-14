@@ -95,7 +95,7 @@ $B/tube_mol_tester: bindir $O/tube_mol_tester.o $L/libdrawp3d.a
 
 $B/tori: bindir $O/tori.o $L/libdrawp3d.a
 	@echo "Linking " $@
-	@$(CC) -o $@ ${LFLAGS} $O/tori.o -L$L -ldrawp3d $(LIBS)
+	$(CC) -o $@ ${LFLAGS} $O/tori.o -L$L -ldrawp3d $(LIBS)
 
 $B/autopaint_tester: $O/autopaint_tester.o $L/libdrawp3d.a	
 	@echo "Linking " $@
@@ -107,7 +107,7 @@ $B/gl_ren_tester: $O/gl_ren_tester.o $L/libdrawp3d.a
 
 $B/fl_gl_interface: $O/fl_gl_interface.o $O/fl_gl_stuff.o $L/libdrawp3d.a
 	@echo "Linking " $@
-	@$(CXX) -o $@ ${LFLAGS} $O/fl_gl_interface.o $O/fl_gl_stuff.o \
+	$(CXX) -o $@ ${LFLAGS} $O/fl_gl_interface.o $O/fl_gl_stuff.o \
 		-L$L -ldrawp3d -lfltk -lfltk_gl $(LIBS)
 
 include ${TOP}/rules.mk

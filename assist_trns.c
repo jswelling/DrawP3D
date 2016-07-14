@@ -68,7 +68,8 @@ static P_Transform* push_trans( P_Transform *trans_in )
     
     new_depth= 2*TRANS_STACK_DEPTH(self);
     slot_id= TRANS(self)-TRANS_STACK(self);
-    if (!(TRANS(self)=(P_Transform*)realloc(new_depth*sizeof(P_Transform)))) {
+    if (!(TRANS(self)=(P_Transform*)realloc(TRANS(self),
+					    new_depth*sizeof(P_Transform)))) {
       ger_fatal("assist_trns: push_trans: cannot realloc %d bytes!",
 		new_depth*sizeof(P_Transform));
     }

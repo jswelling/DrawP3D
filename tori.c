@@ -52,8 +52,12 @@ static P_Vector upa  = {0.0, 1.0, 0.0};
 static P_Point fromb = {3.0, 0.0, 18.0};
 static P_Point tob   = {0.0, 0.0, 0.0};
 static P_Vector upb  = {0.0, 2.0, 0.0};
+static float foveaa  = 15.0;
+static float foveab  = 15.0;
+/*
 static float foveaa  = 30.0;
 static float foveab  = 45.0;
+*/
 static float hither  = -5.0;
 static float yon     = -60.0; 
 
@@ -163,8 +167,8 @@ static void show_cb(Widget w, XtPointer data, XtPointer cb)
 main(int argc, char *argv[])
 {
   int i;
-  char r[64], s[64];
-  char r2[64], s2[64];
+  char r[30], s[10];
+  char r2[30], s2[10];
   int width=300, height=300;
 
   exename= argv[0];
@@ -243,6 +247,7 @@ main(int argc, char *argv[])
     XtSetArg(args[i], XmNleftAttachment, XmATTACH_FORM); i++;
     drawa = XmCreateDrawingArea(draw_form, "spina", args, i);
     XtManageChild(drawa);
+    sprintf(r, "widget=%ld", (long)drawa);
     sprintf(s, "%dx%d", width, height);
     
     i = 0;
@@ -262,17 +267,13 @@ main(int argc, char *argv[])
 
     XtRealizeWidget(toplevel);
 
-    /* Have to wait for widget to be realized to get window ID */
-    sprintf(r, "widget=%ld", (long)drawa);
-#ifdef never
-    sprintf(r, "window=%ld", (long)XtWindow(drawa));
-#endif
-
 #ifdef never
     dp_init_ren("myrena", "xpainter", r, s);
-    dp_init_ren("myrenb", "xpainter", r2, s2);
 #endif
     dp_init_ren("myrena", "gl", r, s);
+#ifdef never
+    dp_init_ren("myrenb", "xpainter", r2, s2);
+#endif
     dp_init_ren("myrenb", "gl", r2, s2);
   }
   else { /* automanage renderers */
@@ -280,28 +281,34 @@ main(int argc, char *argv[])
     dp_init_ren("myrena", "xpainter","automanage","");
     dp_init_ren("myrenb", "xpainter","automanage","");
 #endif
-    dp_init_ren("myrena", "gl","","");
-    dp_init_ren("myrenb", "gl","","");
+    dp_init_ren("myrena", "gl","automanage","");
+    dp_init_ren("myrenb", "gl","automanage","");
   }
 
   fprintf(stderr, "%s: renderer initialized\n",exename);
 
   dp_open("torus1");
+  /*
     dp_torus(2.5, 0.5);
+  */
     dp_polyline(P3D_CCVTX, P3D_RGB, coords1a, 2);
     dp_polyline(P3D_CCVTX, P3D_RGB, coords1b, 2);
     dp_gobcolor(&blue);
   dp_close();
 
   dp_open("torus2");
+  /*
     dp_torus(4.5, 0.5);
+  */
     dp_polyline(P3D_CCVTX, P3D_RGB, coords2a, 2);
     dp_polyline(P3D_CCVTX, P3D_RGB, coords2b, 2);
     dp_gobcolor(&red);
   dp_close();
 
   dp_open("torus3");
+  /*
     dp_torus(6.5, 0.5);
+  */
     dp_backcull(1);
     dp_polyline(P3D_CCVTX, P3D_RGB, coords3a, 2);
     dp_polyline(P3D_CCVTX, P3D_RGB, coords3b, 2);

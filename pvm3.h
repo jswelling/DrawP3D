@@ -31,7 +31,41 @@
  *
  *	Libpvm3 includes.
  *
-$Log$
+$Log: pvm3.h,v $
+Revision 1.1  2002/09/20 20:35:02  welling
+
+----------------------------------------------------------------------
+Committing in .
+
+Added Files:
+	FNAMES.h Fl_DrawP3D_Window.h ambient_mthd.c assist.c assist.h
+	assist_attr.c assist_prim.c assist_spln.c assist_text.c
+ 	assist_trns.c attribute.c autopaint_tester.c axis.c
+ 	bezier_mthd.c boundbox.c bugdemo.c c_tester.c c_vlist_mthd.c
+ 	camera_mthd.c chash_mthd.c cmap_mthd.c color.c
+ 	cr_applications.h cr_glwrapper.h cube_cases.c cyl_mthd.c
+ 	cylinder.h dch_tester.c default_attr.c dirichlet.c dirichlet.h
+ 	drawp3d.h drawp3d_ci.c drawp3d_fi.c dum_ren_mthd.c
+ 	f_vlist_mthd.c fl_gl_interface.h fnames_.h gauss.c ge_error.c
+ 	ge_error.h gen_painter.c gen_painter.h gen_paintr_strct.h
+ 	gl_incl.h gl_ren_mthd.c gl_ren_tester.c gl_strct.h gob_mthd.c
+ 	hershey.h ihash_mthd.c indent.c indent.h irreg_isosf.c
+ 	irreg_zsurf.c iso_demo.c isosurf.c iv_ren_mthd.c iv_ren_mthd.h
+ 	light_mthd.c lvr_ren_mthd.c m_vlist_mthd.c material.c
+ 	mesh_mthd.c null_mthd.c obj_tester.c p3d_preamble.h
+ 	p3d_ren_mthd.c p3dgen.c p3dgen.h painter.c painter.h
+ 	painter_clip.c painter_util.c paintr_strct.h paintr_trans.c
+ 	pgen_objects.h pgon_mthd.c pline_mthd.c pmark_mthd.c
+ 	pnt_ren_mthd.c pvm3.h pvm_geom.h pvm_ren_mthd.c pvm_ren_mthd.h
+	rand_isosurf.c rand_zsurf.c random_flts.h shutdown_tester.c
+ 	sphere.h sphere_mthd.c spline.c spline.h std_cmap.c std_cmap.h
+ 	symbol.c test.c test2.c test3.c text_mthd.c tmp.c tori.c
+ 	torus_mthd.c transform.c tri_mthd.c tube_mol_tester.c
+ 	tube_molecules.c unicos_defs.h unix_defs.h vector.c
+ 	vrml_ren_mthd.c xdrawih.c xdrawih.h xpainter.c xpnt_ren_mthd.c
+ 	zsurface.c
+ ----------------------------------------------------------------------
+
  * Revision 1.1  1996/07/31  23:25:44  dthompso
  * Initial revision
  *
